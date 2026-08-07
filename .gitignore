@@ -1,0 +1,9 @@
+# C build artifacts
+*.o
+vxwm/vxwm
+vxwm/config.h
+vxwm/vxwm-*.tar.gz
+
+# User data / caches
+config/wal/cache/
+wallpapers/generated/

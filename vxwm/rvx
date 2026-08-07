@@ -1,0 +1,23 @@
+#!/bin/sh
+# rvx - restart vxwm
+# Installed by `make install` as ${PREFIX}/bin/rvx.
+set -eu
+
+usage() {
+	echo "usage: rvx [-d]" 1>&2
+	echo "  -d   restart vxwm within a fresh dbus-run-session" 1>&2
+	echo "  -h   show this help" 1>&2
+	exit 1
+}
+
+case "${1:-}" in
+	-h|-help) usage ;;
+esac
+
+killall vxwm 2>/dev/null || true
+
+if [ "${1:-}" = "-d" ]; then
+	exec dbus-run-session vxwm
+fi
+
+exec vxwm
