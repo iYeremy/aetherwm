@@ -46,201 +46,36 @@
 
 #include "drw.h"
 #include "util.h"
+#include "vxwm.h"
 
-/* macros */
-#define BUTTONMASK              (ButtonPressMask|ButtonReleaseMask)
-#define CLEANMASK(mask)         (mask & ~(numlockmask|LockMask) & (ShiftMask|ControlMask|Mod1Mask|Mod2Mask|Mod3Mask|Mod4Mask|Mod5Mask))
-#define INTERSECT(x,y,w,h,m)    (MAX(0, MIN((x)+(w),(m)->wx+(m)->ww) - MAX((x),(m)->wx)) \
-                               * MAX(0, MIN((y)+(h),(m)->wy+(m)->wh) - MAX((y),(m)->wy)))
-#define ISVISIBLE(C)            ((C->tags & C->mon->tagset[C->mon->seltags]))
-#define MOUSEMASK               (BUTTONMASK|PointerMotionMask)
-#define WIDTH(X)                ((X)->w + 2 * (X)->bw)
-#define HEIGHT(X)               ((X)->h + 2 * (X)->bw)
-#define TAGMASK                 ((1 << LENGTH(tags)) - 1)
-#define TEXTW(X)                (drw_fontset_getwidth(drw, (X)) + lrpad)
-
-/* enums */
-enum { CurNormal, CurResize, CurMove, CurLast }; /* cursor */
-enum { SchemeNorm, SchemeSel }; /* color schemes */
-enum { NetSupported, NetWMName, NetWMState, NetWMCheck,
-       NetWMFullscreen, NetActiveWindow, NetWMWindowType,
-       NetWMWindowTypeDialog, NetClientList, NetLast }; /* EWMH atoms */
-enum { WMProtocols, WMDelete, WMState, WMTakeFocus, WMLast }; /* default atoms */
-enum { ClkTagBar, ClkLtSymbol, ClkStatusText, ClkWinTitle,
-       ClkClientWin, ClkRootWin, ClkLast }; /* clicks */
-
-typedef union {
-	int i;
-	unsigned int ui;
-	float f;
-	const void *v;
-} Arg;
-
-typedef struct {
-	unsigned int click;
-	unsigned int mask;
-	unsigned int button;
-	void (*func)(const Arg *arg);
-	const Arg arg;
-} Button;
-
-typedef struct Monitor Monitor;
-typedef struct Client Client;
-struct Client {
-	char name[256];
-	float mina, maxa;
-	int x, y, w, h;
-	int oldx, oldy, oldw, oldh;
-	int basew, baseh, incw, inch, maxw, maxh, minw, minh, hintsvalid;
-	int bw, oldbw;
-	unsigned int tags;
-	int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen;
-	Client *next;
-	Client *snext;
-	Monitor *mon;
-	Window win;
-};
-
-typedef struct {
-	unsigned int mod;
-	KeySym keysym;
-	void (*func)(const Arg *);
-	const Arg arg;
-} Key;
-
-typedef struct {
-	const char *symbol;
-	void (*arrange)(Monitor *);
-} Layout;
-
-struct Monitor {
-	char ltsymbol[16];
-	float mfact;
-	int nmaster;
-	int num;
-	int by;               /* bar geometry */
-	int mx, my, mw, mh;   /* screen size */
-	int wx, wy, ww, wh;   /* window area  */
-	unsigned int seltags;
-	unsigned int sellt;
-	unsigned int tagset[2];
-	int showbar;
-	int topbar;
-	Client *clients;
-	Client *sel;
-	Client *stack;
-	Monitor *next;
-	Window barwin;
-	const Layout *lt[2];
-};
-
-typedef struct {
-	const char *class;
-	const char *instance;
-	const char *title;
-	unsigned int tags;
-	int isfloating;
-	int monitor;
-} Rule;
-
-/* function declarations */
-static void applyrules(Client *c);
-static int applysizehints(Client *c, int *x, int *y, int *w, int *h, int interact);
-static void arrange(Monitor *m);
-static void arrangemon(Monitor *m);
-static void attach(Client *c);
-static void attachstack(Client *c);
-static void buttonpress(XEvent *e);
-static void checkotherwm(void);
-static void cleanup(void);
-static void cleanupmon(Monitor *mon);
-static void clientmessage(XEvent *e);
-static void configure(Client *c);
-static void configurenotify(XEvent *e);
-static void configurerequest(XEvent *e);
-static Monitor *createmon(void);
-static void destroynotify(XEvent *e);
-static void detach(Client *c);
-static void detachstack(Client *c);
-static Monitor *dirtomon(int dir);
-static void drawbar(Monitor *m);
-static void drawbars(void);
-static void enternotify(XEvent *e);
-static void expose(XEvent *e);
-static void focus(Client *c);
-static void focusin(XEvent *e);
-static void focusmon(const Arg *arg);
-static void focusstack(const Arg *arg);
-static Atom getatomprop(Client *c, Atom prop);
-static int getrootptr(int *x, int *y);
-static long getstate(Window w);
-static int gettextprop(Window w, Atom atom, char *text, unsigned int size);
-static void grabbuttons(Client *c, int focused);
-static void grabkeys(void);
-static void incnmaster(const Arg *arg);
-static void keypress(XEvent *e);
-static void killclient(const Arg *arg);
-static void manage(Window w, XWindowAttributes *wa);
-static void mappingnotify(XEvent *e);
-static void maprequest(XEvent *e);
-static void monocle(Monitor *m);
-static void motionnotify(XEvent *e);
-static void movemouse(const Arg *arg);
-static Client *nexttiled(Client *c);
-static void pop(Client *c);
-static void propertynotify(XEvent *e);
-static void quit(const Arg *arg);
-static Monitor *recttomon(int x, int y, int w, int h);
-static void resize(Client *c, int x, int y, int w, int h, int interact);
-static void resizeclient(Client *c, int x, int y, int w, int h);
-static void resizemouse(const Arg *arg);
-static void restack(Monitor *m);
-static void run(void);
-static void scan(void);
-static int sendevent(Client *c, Atom proto);
-static void sendmon(Client *c, Monitor *m);
-static void setclientstate(Client *c, long state);
-static void setfocus(Client *c);
-static void setfullscreen(Client *c, int fullscreen);
-static void setlayout(const Arg *arg);
-static void setmfact(const Arg *arg);
-static void setup(void);
-static void seturgent(Client *c, int urg);
-static void showhide(Client *c);
-static void spawn(const Arg *arg);
-static void tag(const Arg *arg);
-static void tagmon(const Arg *arg);
-static void tile(Monitor *m);
-static void togglebar(const Arg *arg);
-static void togglefloating(const Arg *arg);
-static void toggletag(const Arg *arg);
-static void toggleview(const Arg *arg);
-static void unfocus(Client *c, int setfocus);
-static void unmanage(Client *c, int destroyed);
-static void unmapnotify(XEvent *e);
-static void updatebarpos(Monitor *m);
-static void updatebars(void);
-static void updateclientlist(void);
-static int updategeom(void);
-static void updatenumlockmask(void);
-static void updatesizehints(Client *c);
-static void updatestatus(void);
-static void updatetitle(Client *c);
-static void updatewindowtype(Client *c);
-static void updatewmhints(Client *c);
-static void view(const Arg *arg);
-static Client *wintoclient(Window w);
-static Monitor *wintomon(Window w);
-static int xerror(Display *dpy, XErrorEvent *ee);
-static int xerrordummy(Display *dpy, XErrorEvent *ee);
-static int xerrorstart(Display *dpy, XErrorEvent *ee);
-static void zoom(const Arg *arg);
+/* Phase-2 module APIs used by the core integration points */
+#if WINDOWMAP
+#include "modules/windowmap/windowmap.h"
+#endif
+#if GAPS
+#include "modules/gaps/gaps.h"
+#endif
+#if FULLSCREEN
+#include "modules/fullscreen/fullscreen.h"
+#endif
+#if XRDB
+#include "modules/xrdb/xrdb.h"
+#endif
+#if ENHANCED_TOGGLE_FLOATING || FLOATING_LAYOUT_FLOATS_WINDOWS
+#include "modules/etf/etf.h"
+#endif
+#if EWMH_TAGS
+#include "modules/ewmh_tags/ewmh_tags.h"
+#endif
+#if EXTERNAL_BARS
+#include "modules/externalbars/externalbars.h"
+#endif
 
 /* variables */
 static const char broken[] = "broken";
 static char stext[256];
 static int screen;
-static int sw, sh;           /* X display screen geometry width, height */
+int sw, sh;           /* X display screen geometry width, height */
 static int bh;               /* bar height */
 static int lrpad;            /* sum of left and right padding for text */
 static int (*xerrorxlib)(Display *, XErrorEvent *);
@@ -261,20 +96,22 @@ static void (*handler[LASTEvent]) (XEvent *) = {
 	[PropertyNotify] = propertynotify,
 	[UnmapNotify] = unmapnotify
 };
-static Atom wmatom[WMLast], netatom[NetLast];
+Atom wmatom[WMLast], netatom[NetLast];
 static int running = 1;
 static Cur *cursor[CurLast];
-static Clr **scheme;
-static Display *dpy;
-static Drw *drw;
-static Monitor *mons, *selmon;
-static Window root, wmcheckwin;
+Clr **scheme;
+Display *dpy;
+Drw *drw;
+Monitor *mons, *selmon;
+Window root;
+static Window wmcheckwin;
 
 /* configuration, allows nested code to access above variables */
 #include "config.h"
 
 /* compile-time check if all tags fit into an unsigned int bit array. */
 struct NumTags { char limitexceeded[LENGTH(tags) > 31 ? -1 : 1]; };
+size_t ntags = LENGTH(tags); /* exported for modules */
 
 /* function implementations */
 void
@@ -614,6 +451,10 @@ configurerequest(XEvent *e)
 				c->x = m->mx + (m->mw / 2 - WIDTH(c) / 2); /* center in x direction */
 			if ((c->y + c->h) > m->my + m->mh && c->isfloating)
 				c->y = m->my + (m->mh / 2 - HEIGHT(c) / 2); /* center in y direction */
+#if RESTORE_SIZE_AND_POS_ETF
+			if (ev->value_mask & (CWX|CWY|CWWidth|CWHeight))
+				c->wasmanuallyedited = 1; /* etf: keep the user's geometry */
+#endif
 			if ((ev->value_mask & (CWX|CWY)) && !(ev->value_mask & (CWWidth|CWHeight)))
 				configure(c);
 			if (ISVISIBLE(c))
@@ -642,11 +483,17 @@ createmon(void)
 	m->tagset[0] = m->tagset[1] = 1;
 	m->mfact = mfact;
 	m->nmaster = nmaster;
+#if GAPS
+	m->gappx = gappx;
+#endif
 	m->showbar = showbar;
 	m->topbar = topbar;
 	m->lt[0] = &layouts[0];
 	m->lt[1] = &layouts[1 % LENGTH(layouts)];
 	strncpy(m->ltsymbol, layouts[0].symbol, sizeof m->ltsymbol);
+#if EXTERNAL_BARS
+	m->strut_left = m->strut_right = m->strut_top = m->strut_bottom = 0;
+#endif
 	return m;
 }
 
@@ -836,6 +683,9 @@ focusmon(const Arg *arg)
 	unfocus(selmon->sel, 0);
 	selmon = m;
 	focus(NULL);
+#if EWMH_TAGS
+	ewmh_setviewport();
+#endif
 }
 
 void
@@ -1077,8 +927,19 @@ manage(Window w, XWindowAttributes *wa)
 	grabbuttons(c, 0);
 	if (!c->isfloating)
 		c->isfloating = c->oldstate = trans != None || c->isfixed;
+#if FLOATING_LAYOUT_FLOATS_WINDOWS
+	if (!c->isfloating && !c->mon->lt[c->mon->sellt]->arrange)
+		c->isfloating = 1; /* floating layout floats every new window */
+#endif
+#if ENHANCED_TOGGLE_FLOATING
+	c->wasfloating = c->isfloating;
+	c->nfixed = c->isfixed;
+#endif
 	if (c->isfloating)
 		XRaiseWindow(dpy, c->win);
+#if EWMH_TAGS
+	ewmh_setclientdesktop(c);
+#endif
 	attach(c);
 	attachstack(c);
 	XChangeProperty(dpy, root, netatom[NetClientList], XA_WINDOW, 32, PropModeAppend,
@@ -1233,9 +1094,23 @@ propertynotify(XEvent *e)
 
 	if ((ev->window == root) && (ev->atom == XA_WM_NAME))
 		updatestatus();
-	else if (ev->state == PropertyDelete)
+	else if (ev->state == PropertyDelete) {
+#if EXTERNAL_BARS
+		if (ev->atom == netatom[NetWMStrut] || ev->atom == netatom[NetWMStrutPartial]) {
+			Client *bc = wintoclient(ev->window);
+
+			if (bc)
+				externalbars_update(bc);
+		}
+#endif
 		return; /* ignore */
+	}
 	else if ((c = wintoclient(ev->window))) {
+#if EXTERNAL_BARS
+		if (ev->atom == netatom[NetWMStrut] || ev->atom == netatom[NetWMStrutPartial])
+			externalbars_update(c);
+		else
+#endif
 		switch(ev->atom) {
 		default: break;
 		case XA_WM_TRANSIENT_FOR:
@@ -1523,6 +1398,21 @@ setlayout(const Arg *arg)
 	if (arg && arg->v)
 		selmon->lt[selmon->sellt] = (Layout *)arg->v;
 	strncpy(selmon->ltsymbol, selmon->lt[selmon->sellt]->symbol, sizeof selmon->ltsymbol);
+#if FLOATING_LAYOUT_FLOATS_WINDOWS
+	/* leaving the floating layout re-tiles windows that were floated by it */
+	if (selmon->lt[selmon->sellt]->arrange) {
+		Client *c;
+
+		for (c = selmon->clients; c; c = c->next)
+#if ENHANCED_TOGGLE_FLOATING
+			if (!c->wasfloating && c->isfloating && !c->isfixed)
+				c->isfloating = 0;
+#else
+			if (!c->isfixed)
+				c->isfloating = 0;
+#endif
+	}
+#endif
 	if (selmon->sel)
 		arrange(selmon);
 	else
@@ -1587,6 +1477,10 @@ setup(void)
 	netatom[NetWMWindowType] = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE", False);
 	netatom[NetWMWindowTypeDialog] = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_DIALOG", False);
 	netatom[NetClientList] = XInternAtom(dpy, "_NET_CLIENT_LIST", False);
+#if EXTERNAL_BARS
+	netatom[NetWMStrut] = XInternAtom(dpy, "_NET_WM_STRUT", False);
+	netatom[NetWMStrutPartial] = XInternAtom(dpy, "_NET_WM_STRUT_PARTIAL", False);
+#endif
 	/* init cursors */
 	cursor[CurNormal] = drw_cur_create(drw, XC_left_ptr);
 	cursor[CurResize] = drw_cur_create(drw, XC_sizing);
@@ -1619,6 +1513,12 @@ setup(void)
 	XSelectInput(dpy, root, wa.event_mask);
 	grabkeys();
 	focus(NULL);
+#if XRDB
+	loadxrdb(NULL);
+#endif
+#if EWMH_TAGS
+	ewmh_tags_init();
+#endif
 }
 
 void
@@ -1641,14 +1541,22 @@ showhide(Client *c)
 		return;
 	if (ISVISIBLE(c)) {
 		/* show clients top down */
+#if WINDOWMAP
+		window_map(c, 0);
+#else
 		XMoveWindow(dpy, c->win, c->x, c->y);
+#endif
 		if ((!c->mon->lt[c->mon->sellt]->arrange || c->isfloating) && !c->isfullscreen)
 			resize(c, c->x, c->y, c->w, c->h, 0);
 		showhide(c->snext);
 	} else {
 		/* hide clients bottom up */
 		showhide(c->snext);
+#if WINDOWMAP
+		window_unmap(c, 1);
+#else
 		XMoveWindow(dpy, c->win, WIDTH(c) * -2, c->y);
+#endif
 	}
 }
 
@@ -1739,6 +1647,9 @@ togglefloating(const Arg *arg)
 	if (selmon->sel->isfullscreen) /* no support for fullscreen windows */
 		return;
 	selmon->sel->isfloating = !selmon->sel->isfloating || selmon->sel->isfixed;
+#if ENHANCED_TOGGLE_FLOATING
+	selmon->sel->wasfloating = selmon->sel->isfloating;
+#endif
 	if (selmon->sel->isfloating)
 		resize(selmon->sel, selmon->sel->x, selmon->sel->y,
 			selmon->sel->w, selmon->sel->h, 0);
@@ -1769,6 +1680,9 @@ toggleview(const Arg *arg)
 		selmon->tagset[selmon->seltags] = newtagset;
 		focus(NULL);
 		arrange(selmon);
+#if EWMH_TAGS
+		ewmh_setviewport();
+#endif
 	}
 }
 
@@ -1850,8 +1764,17 @@ updatebars(void)
 void
 updatebarpos(Monitor *m)
 {
+	m->wx = m->mx;
 	m->wy = m->my;
+	m->ww = m->mw;
 	m->wh = m->mh;
+#if EXTERNAL_BARS
+	/* reserve space for external bars that set _NET_WM_STRUT(_PARTIAL) */
+	m->wx += m->strut_left;
+	m->ww -= m->strut_left + m->strut_right;
+	m->wy += m->strut_top;
+	m->wh -= m->strut_top + m->strut_bottom;
+#endif
 	if (m->showbar) {
 		m->wh -= bh;
 		m->by = m->topbar ? m->wy : m->wy + m->wh;
@@ -2071,6 +1994,9 @@ view(const Arg *arg)
 		selmon->tagset[selmon->seltags] = arg->ui & TAGMASK;
 	focus(NULL);
 	arrange(selmon);
+#if EWMH_TAGS
+	ewmh_setviewport();
+#endif
 }
 
 Client *

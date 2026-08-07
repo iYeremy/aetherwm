@@ -11,13 +11,20 @@
 
 include config.mk
 
-SRC = drw.c vxwm.c util.c
+SRC = drw.c vxwm.c util.c \
+	modules/etf/etf.c \
+	modules/ewmh_tags/ewmh_tags.c \
+	modules/externalbars/externalbars.c \
+	modules/fullscreen/fullscreen.c \
+	modules/gaps/gaps.c \
+	modules/windowmap/windowmap.c \
+	modules/xrdb/xrdb.c
 OBJ = ${SRC:.c=.o}
 
 all: vxwm
 
 .c.o:
-	${CC} -c ${CFLAGS} $<
+	${CC} -c -o $@ ${CFLAGS} $<
 
 ${OBJ}: config.h config.mk
 
