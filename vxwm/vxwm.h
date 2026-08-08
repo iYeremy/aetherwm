@@ -52,7 +52,12 @@
 #define TEXTW(X)                (drw_fontset_getwidth(drw, (X)) + lrpad)
 
 /* enums */
-enum { CurNormal, CurResize, CurMove, CurLast }; /* cursor */
+enum { CurNormal, CurResize, CurMove,
+#if BETTER_RESIZE && BR_CHANGE_CURSOR
+	CurNW, CurNE, CurSW, CurSE, /* corner cursors */
+	CurN, CurS, CurE, CurW,     /* edge cursors */
+#endif
+	CurLast }; /* cursor */
 enum { SchemeNorm, SchemeSel }; /* color schemes */
 enum { NetSupported, NetWMName, NetWMState, NetWMCheck,
        NetWMFullscreen, NetActiveWindow, NetWMWindowType,
@@ -102,6 +107,12 @@ struct Client {
 #if WINDOWMAP
 	int ismapped; /* windowmap: whether the window is currently mapped */
 #endif
+#if INFINITE_TAGS
+	int saved_cx, saved_cy; /* infinitetags: canvas-absolute position */
+	int saved_cw, saved_ch; /* infinitetags: saved size */
+	int was_on_canvas;      /* infinitetags: position was saved for this tag */
+	int is_pinned;          /* infinitetags: pinned windows do not move with the canvas */
+#endif
 #if ENHANCED_TOGGLE_FLOATING
 	int sfx, sfy, sfw, sfh; /* etf: last floating size/position */
 	int wasfloating;        /* etf: client is floating because of a toggle */
@@ -124,6 +135,13 @@ typedef struct {
 	void (*arrange)(Monitor *);
 } Layout;
 
+#if INFINITE_TAGS
+typedef struct {
+	int cx, cy;        /* current viewport offset for a tag */
+	int saved_cx, saved_cy; /* offset saved while the layout was tiled */
+} CanvasOffset;
+#endif
+
 struct Monitor {
 	char ltsymbol[16];
 	float mfact;
@@ -143,6 +161,9 @@ struct Monitor {
 	Monitor *next;
 	Window barwin;
 	const Layout *lt[2];
+#if INFINITE_TAGS
+	CanvasOffset *canvas; /* infinitetags: viewport offset per tag */
+#endif
 #if GAPS
 	int gappx; /* gaps: outer/inner gap size in pixels */
 #endif
@@ -167,9 +188,12 @@ extern Monitor *mons, *selmon;
 extern Atom wmatom[WMLast], netatom[NetLast];
 extern Clr **scheme;
 extern Drw *drw;
+extern Cur *cursor[CurLast];
 extern int sw, sh;        /* X display screen geometry width, height */
 extern const char *tags[]; /* tag names (defined in config.h) */
 extern size_t ntags;       /* number of tags */
+extern const int refreshrate; /* move/resize rate limit (defined in config.h) */
+extern const int snap;        /* snap pixel (defined in config.h) */
 
 /* core API (used by config.h keybinds and by modules) */
 void applyrules(Client *c);
@@ -216,6 +240,7 @@ void motionnotify(XEvent *e);
 void movemouse(const Arg *arg);
 Client *nexttiled(Client *c);
 void pop(Client *c);
+void swaptile(Client *a, Client *b);
 void propertynotify(XEvent *e);
 void quit(const Arg *arg);
 Monitor *recttomon(int x, int y, int w, int h);

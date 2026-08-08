@@ -12,13 +12,21 @@
 include config.mk
 
 SRC = drw.c vxwm.c util.c \
+	modules/autostart/autostart.c \
+	modules/betterresize/betterresize.c \
+	modules/directionalfocus/directionalfocus.c \
+	modules/directionalmove/directionalmove.c \
 	modules/etf/etf.c \
 	modules/ewmh_tags/ewmh_tags.c \
 	modules/externalbars/externalbars.c \
 	modules/fullscreen/fullscreen.c \
 	modules/gaps/gaps.c \
+	modules/infinitetags/infinitetags.c \
+	modules/moveresizekbd/moveresizekbd.c \
+	modules/warptoclient/warptoclient.c \
 	modules/windowmap/windowmap.c \
-	modules/xrdb/xrdb.c
+	modules/xrdb/xrdb.c \
+	modules/zoom/zoom.c
 OBJ = ${SRC:.c=.o}
 
 all: vxwm
@@ -28,7 +36,7 @@ all: vxwm
 
 ${OBJ}: config.h config.mk
 
-config.h:
+config.h: config.def.h
 	cp config.def.h $@
 
 vxwm: ${OBJ}

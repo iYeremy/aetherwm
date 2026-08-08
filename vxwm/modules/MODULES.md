@@ -1,9 +1,9 @@
 # Contrato de módulos
 
 Este documento define cómo se estructuran los módulos de `vxwm`. **Estado actual:
-Fase 2 completa** — los módulos del núcleo existen, están cableados en `vxwm.c`
-y el proyecto compila y enlaza con todos activados o con cualquier combinación
-de desactivados.
+Fases 1 a 4 completas** — todos los módulos del núcleo, infinitetags y módulos de
+interacción están completamente implementados, modularizados en su propio `.c`/`.h`,
+cableados en `vxwm.h`/`vxwm.c` y verificados con `make check`.
 
 ## Principio
 
@@ -53,25 +53,25 @@ modules/<nombre>/
 5. Documentar keybinds/reglas en `config.def.h` si aplica.
 6. Ejecutar `make && make check` (obligatorio, sin warnings).
 
-## Fase 2: módulos del núcleo (implementada y cableada)
+## Catálogo completo de módulos (Fases 2, 3 y 4)
 
-| Módulo | Macro | Hooks en el núcleo |
+| Módulo | Macro | Descripción / Hooks |
 |---|---|---|
-| `windowmap` | `WINDOWMAP` | `showhide()` mapea/desmapea en vez de mover fuera de pantalla |
-| `gaps` | `GAPS` | `gaps_tile` en `layouts[]`; `setgaps` en keybinds; `createmon()` init |
-| `fullscreen` | `FULLSCREEN` | keybind `MOD+Shift+F` |
-| `xrdb` | `XRDB` | `setup()` y keybind `MOD+Shift+R` recargan esquemas |
-| `etf` | `ENHANCED_TOGGLE_FLOATING` | `manage()`, `setlayout()`, `configurerequest()` |
-| `ewmh_tags` | `EWMH_TAGS` | `setup()`, `view()`, `toggleview()`, `focusmon()`, `manage()` |
-| `externalbars` | `EXTERNAL_BARS` | `propertynotify()`, `updatebarpos()`, `createmon()` |
+| `windowmap` | `WINDOWMAP` | Mapea/desmapea ventanas en vez de moverlas fuera de pantalla |
+| `gaps` | `GAPS` | Layout `gaps_tile`, insets y gaps dinámicos con `setgaps` |
+| `fullscreen` | `FULLSCREEN` | Modo pantalla completa con `togglefullscreen` |
+| `xrdb` | `XRDB` | Recarga de colores en caliente desde Xresources con `loadxrdb` |
+| `etf` | `ENHANCED_TOGGLE_FLOATING` | Redimensionado/restauración inteligente de ventanas flotantes |
+| `ewmh_tags` | `EWMH_TAGS` | Publica propiedades EWMH de escritorios para barras externas |
+| `externalbars` | `EXTERNAL_BARS` | Respeta struts (_NET_WM_STRUT) de paneles externos |
+| `infinitetags` | `INFINITE_TAGS` | Canvas infinito deslizable por tag, coordenadas en barra, pinning |
+| `moveresizekbd` | `MOVE_RESIZE_WITH_KEYBOARD` | Mover y redimensionar ventanas flotantes por teclado |
+| `directionalfocus` | `DIRECTIONAL_FOCUS` | Enfoque direccional de ventanas con `focusdir` |
+| `directionalmove` | `DIRECTIONAL_MOVE` | Movimiento direccional de ventanas en tiled con `movedir` |
+| `betterresize` | `BR_CHANGE_CURSOR` | Redimensionado de ventanas desde 8 bordes/esquinas con cambio de cursor |
+| `zoom` | `ZOOM` | Integración con vcompmgr para zoom |
+| `warptoclient` | `WARP_TO_CLIENT` | Warp del puntero al foco/evento de ventana |
+| `autostart` | `AUTOSTART` | Ejecución de comandos de arranque al iniciar la sesión |
 
-`modules/modules.h` incluye además los switches auxiliares
-`FLOATING_LAYOUT_FLOATS_WINDOWS`, `RESTORE_SIZE_AND_POS_ETF` y la regla de
-dependencias que fuerza `FLOATING_LAYOUT_FLOATS_WINDOWS` cuando
-`ENHANCED_TOGGLE_FLOATING` está activo.
+`modules/modules.h` gestiona además las reglas de dependencias (por ejemplo, `INFINITE_TAGS` fuerza `WINDOWMAP`, `ENHANCED_TOGGLE_FLOATING` fuerza `FLOATING_LAYOUT_FLOATS_WINDOWS`).
 
-## Fases pendientes (desde docs/ANALISIS.md)
-
-- **Fase 3** — infinitetags (el más complejo; README de módulo propio).
-- **Fase 4** — interacción: moveresizekbd, directionalfocus, directionalmove,
-  betterresize, zoom, warp, autostart.

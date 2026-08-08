@@ -71,6 +71,32 @@
 #include "modules/externalbars/externalbars.h"
 #endif
 
+/* Phase-3/4 module APIs used by the core integration points */
+#if INFINITE_TAGS
+#include "modules/infinitetags/infinitetags.h"
+#endif
+#if MOVE_RESIZE_WITH_KEYBOARD
+#include "modules/moveresizekbd/moveresizekbd.h"
+#endif
+#if DIRECTIONAL_FOCUS
+#include "modules/directionalfocus/directionalfocus.h"
+#endif
+#if DIRECTIONAL_MOVE
+#include "modules/directionalmove/directionalmove.h"
+#endif
+#if BETTER_RESIZE
+#include "modules/betterresize/betterresize.h"
+#endif
+#if ZOOM
+#include "modules/zoom/zoom.h"
+#endif
+#if WARP_TO_CLIENT
+#include "modules/warptoclient/warptoclient.h"
+#endif
+#if AUTOSTART
+#include "modules/autostart/autostart.h"
+#endif
+
 /* variables */
 static const char broken[] = "broken";
 static char stext[256];
@@ -78,6 +104,9 @@ static int screen;
 int sw, sh;           /* X display screen geometry width, height */
 static int bh;               /* bar height */
 static int lrpad;            /* sum of left and right padding for text */
+#if BAR_PADDING
+static int tvp, bvp, lsp, rsp; /* bar padding: top/bottom/left/right insets */
+#endif
 static int (*xerrorxlib)(Display *, XErrorEvent *);
 static unsigned int numlockmask = 0;
 static void (*handler[LASTEvent]) (XEvent *) = {
@@ -98,7 +127,10 @@ static void (*handler[LASTEvent]) (XEvent *) = {
 };
 Atom wmatom[WMLast], netatom[NetLast];
 static int running = 1;
-static Cur *cursor[CurLast];
+#if AUTOSTART
+static int ignoreautostart = 0; /* set by the -ignoreautostart flag */
+#endif
+Cur *cursor[CurLast]; /* exported for modules (betterresize, infinitetags) */
 Clr **scheme;
 Display *dpy;
 Drw *drw;
@@ -160,6 +192,9 @@ applysizehints(Client *c, int *x, int *y, int *w, int *h, int interact)
 	*w = MAX(1, *w);
 	*h = MAX(1, *h);
 	if (interact) {
+#if !INFINITE_TAGS
+		/* the infinite canvas lets windows live off-screen; the vanilla clamp
+		 * would fight the viewport movement */
 		if (*x > sw)
 			*x = sw - WIDTH(c);
 		if (*y > sh)
@@ -168,6 +203,7 @@ applysizehints(Client *c, int *x, int *y, int *w, int *h, int interact)
 			*x = 0;
 		if (*y + *h + 2 * c->bw < 0)
 			*y = 0;
+#endif
 	} else {
 		if (*x >= m->wx + m->ww)
 			*x = m->wx + m->ww - WIDTH(c);
@@ -349,6 +385,9 @@ cleanupmon(Monitor *mon)
 	}
 	XUnmapWindow(dpy, mon->barwin);
 	XDestroyWindow(dpy, mon->barwin);
+#if INFINITE_TAGS
+	free(mon->canvas);
+#endif
 	free(mon);
 }
 
@@ -390,6 +429,18 @@ configure(Client *c)
 	XSendEvent(dpy, c->win, False, StructureNotifyMask, (XEvent *)&ce);
 }
 
+/* Position the bar window on its monitor, honouring BAR_PADDING insets. */
+static void
+positionbarwin(Monitor *m)
+{
+#if BAR_PADDING
+	XMoveResizeWindow(dpy, m->barwin,
+		m->wx + lsp, m->by + (m->topbar ? tvp : bvp), m->ww - lsp - rsp, bh);
+#else
+	XMoveResizeWindow(dpy, m->barwin, m->wx, m->by, m->ww, bh);
+#endif
+}
+
 void
 configurenotify(XEvent *e)
 {
@@ -410,7 +461,7 @@ configurenotify(XEvent *e)
 				for (c = m->clients; c; c = c->next)
 					if (c->isfullscreen)
 						resizeclient(c, m->mx, m->my, m->mw, m->mh);
-				XMoveResizeWindow(dpy, m->barwin, m->wx, m->by, m->ww, bh);
+				positionbarwin(m);
 			}
 			focus(NULL);
 			arrange(NULL);
@@ -491,6 +542,9 @@ createmon(void)
 	m->lt[0] = &layouts[0];
 	m->lt[1] = &layouts[1 % LENGTH(layouts)];
 	strncpy(m->ltsymbol, layouts[0].symbol, sizeof m->ltsymbol);
+#if INFINITE_TAGS
+	m->canvas = ecalloc(LENGTH(tags), sizeof(CanvasOffset));
+#endif
 #if EXTERNAL_BARS
 	m->strut_left = m->strut_right = m->strut_top = m->strut_bottom = 0;
 #endif
@@ -561,7 +615,11 @@ drawbar(Monitor *m)
 	if (m == selmon) { /* status is only drawn on selected monitor */
 		drw_setscheme(drw, scheme[SchemeNorm]);
 		tw = TEXTW(stext) - lrpad + 2; /* 2px right padding */
+#if BAR_PADDING
+		drw_text(drw, m->ww - tw - lsp - rsp, 0, tw, bh, 0, stext, 0);
+#else
 		drw_text(drw, m->ww - tw, 0, tw, bh, 0, stext, 0);
+#endif
 	}
 
 	for (c = m->clients; c; c = c->next) {
@@ -584,15 +642,39 @@ drawbar(Monitor *m)
 	drw_setscheme(drw, scheme[SchemeNorm]);
 	x = drw_text(drw, x, 0, w, bh, lrpad / 2, m->ltsymbol, 0);
 
+#if INFINITE_TAGS && IT_SHOW_COORDINATES_IN_BAR
+	/* show the current canvas viewport coordinates in the floating layout */
+	if (selmon->lt[selmon->sellt]->arrange == NULL) {
+		char coords[64];
+		int tagidx = getcurrenttag(m);
+
+		snprintf(coords, sizeof coords, COORDINATES_STYLE,
+			m->canvas[tagidx].cx / COORDINATES_DIVISOR,
+			m->canvas[tagidx].cy / COORDINATES_DIVISOR);
+		w = TEXTW(coords);
+		drw_setscheme(drw, scheme[SchemeNorm]);
+		drw_text(drw, x, 0, w, bh, lrpad / 2, coords, 0);
+		x += w;
+	}
+#endif
+
 	if ((w = m->ww - tw - x) > bh) {
 		if (m->sel) {
 			drw_setscheme(drw, scheme[m == selmon ? SchemeSel : SchemeNorm]);
+#if BAR_PADDING
+			drw_text(drw, x, 0, w - lsp - rsp, bh, lrpad / 2, m->sel->name, 0);
+#else
 			drw_text(drw, x, 0, w, bh, lrpad / 2, m->sel->name, 0);
+#endif
 			if (m->sel->isfloating)
 				drw_rect(drw, x + boxs, boxs, boxw, boxw, m->sel->isfixed, 0);
 		} else {
 			drw_setscheme(drw, scheme[SchemeNorm]);
+#if BAR_PADDING
+			drw_rect(drw, x, 0, w - lsp - rsp, bh, 1, 1);
+#else
 			drw_rect(drw, x, 0, w, bh, 1, 1);
+#endif
 		}
 	}
 	drw_map(drw, m->barwin, 0, 0, m->ww, bh);
@@ -710,6 +792,12 @@ focusstack(const Arg *arg)
 	}
 	if (c) {
 		focus(c);
+#if INFINITE_TAGS
+		centerwindow(NULL);
+#endif
+#if WARP_TO_CLIENT && WARP_TO_CENTER_OF_WINDOW_AFFECTED_BY_FOCUSSTACK
+		warptoclient(c);
+#endif
 		restack(selmon);
 	}
 }
@@ -923,6 +1011,22 @@ manage(Window w, XWindowAttributes *wa)
 	updatewindowtype(c);
 	updatesizehints(c);
 	updatewmhints(c);
+#if CENTER_NEW_FLOATING_WINDOWS && !NEW_FLOATING_WINDOWS_APPEAR_UNDER_CURSOR
+	/* new windows spawn centered on their monitor */
+	c->x = c->mon->wx + (c->mon->ww - WIDTH(c)) / 2;
+	c->y = c->mon->wy + (c->mon->wh - HEIGHT(c)) / 2;
+#endif
+#if NEW_FLOATING_WINDOWS_APPEAR_UNDER_CURSOR
+	{
+		int mx, my, di;
+		unsigned int dui;
+		Window dw;
+
+		XQueryPointer(dpy, root, &dw, &dw, &mx, &my, &di, &di, &dui);
+		c->x = mx - c->w / 2;
+		c->y = my - c->h / 2;
+	}
+#endif
 	XSelectInput(dpy, w, EnterWindowMask|FocusChangeMask|PropertyChangeMask|StructureNotifyMask);
 	grabbuttons(c, 0);
 	if (!c->isfloating)
@@ -1014,9 +1118,17 @@ movemouse(const Arg *arg)
 	(void)arg;
 	int x, y, ocx, ocy, nx, ny;
 	Client *c;
+#if MOVE_IN_TILED
+	Client *cc;
+#endif
 	Monitor *m;
 	XEvent ev;
+#if LOCK_MOVE_RESIZE_REFRESH_RATE
 	Time lasttime = 0;
+#endif
+#if ZOOM
+	float zoom_val = zoom_value();
+#endif
 
 	if (!(c = selmon->sel))
 		return;
@@ -1039,12 +1151,19 @@ movemouse(const Arg *arg)
 			handler[ev.type](&ev);
 			break;
 		case MotionNotify:
+#if LOCK_MOVE_RESIZE_REFRESH_RATE
 			if ((ev.xmotion.time - lasttime) <= (1000 / refreshrate))
 				continue;
 			lasttime = ev.xmotion.time;
+#endif
 
+#if ZOOM
+			nx = ocx + (ev.xmotion.x - x) / zoom_val;
+			ny = ocy + (ev.xmotion.y - y) / zoom_val;
+#else
 			nx = ocx + (ev.xmotion.x - x);
 			ny = ocy + (ev.xmotion.y - y);
+#endif
 			if (abs(selmon->wx - nx) < snap)
 				nx = selmon->wx;
 			else if (abs((selmon->wx + selmon->ww) - (nx + WIDTH(c))) < snap)
@@ -1053,9 +1172,33 @@ movemouse(const Arg *arg)
 				ny = selmon->wy;
 			else if (abs((selmon->wy + selmon->wh) - (ny + HEIGHT(c))) < snap)
 				ny = selmon->wy + selmon->wh - HEIGHT(c);
+#if MOVE_IN_TILED
+			if (selmon->lt[selmon->sellt]->arrange && !c->isfloating) {
+				/* dragging a tiled window reorders it among the tiled
+				 * clients and moves it to another monitor when dragged over
+				 * one, instead of floating it */
+				if ((m = recttomon(ev.xmotion.x_root, ev.xmotion.y_root, 1, 1)) != selmon) {
+					sendmon(c, m);
+					selmon = m;
+					focus(NULL);
+				}
+				for (cc = c->mon->clients; cc; cc = cc->next)
+					if (cc != c && !cc->isfloating && ISVISIBLE(cc)
+					&& ev.xmotion.x_root > cc->x && ev.xmotion.x_root < cc->x + cc->w
+					&& ev.xmotion.y_root > cc->y && ev.xmotion.y_root < cc->y + cc->h)
+						break;
+				if (cc) {
+					swaptile(c, cc);
+					focus(c);
+					arrange(c->mon);
+				}
+				break;
+			}
+#else
 			if (!c->isfloating && selmon->lt[selmon->sellt]->arrange
 			&& (abs(nx - c->x) > snap || abs(ny - c->y) > snap))
 				togglefloating(NULL);
+#endif
 			if (!selmon->lt[selmon->sellt]->arrange || c->isfloating)
 				resize(c, nx, ny, c->w, c->h, 1);
 			break;
@@ -1067,6 +1210,13 @@ movemouse(const Arg *arg)
 		selmon = m;
 		focus(NULL);
 	}
+#if ENHANCED_TOGGLE_FLOATING && RESTORE_SIZE_AND_POS_ETF
+	c->wasmanuallyedited = 1;
+	if (c->isfloating) {
+		c->sfx = c->x; c->sfy = c->y;
+		c->sfw = c->w; c->sfh = c->h;
+	}
+#endif
 }
 
 Client *
@@ -1083,6 +1233,35 @@ pop(Client *c)
 	attach(c);
 	focus(c);
 	arrange(c->mon);
+}
+
+/* Swap two clients in their shared monitor's clients list. Used by the core
+ * movemouse() (MOVE_IN_TILED) and by the directionalmove module (movedir). */
+void
+swaptile(Client *a, Client *b)
+{
+	Client *pa = NULL, *pb = NULL, *p;
+
+	for (p = a->mon->clients; p; p = p->next) {
+		if (p->next == a) pa = p;
+		if (p->next == b) pb = p;
+	}
+
+	if (a->next == b) {
+		if (pa) pa->next = b; else a->mon->clients = b;
+		a->next = b->next;
+		b->next = a;
+	} else if (b->next == a) {
+		if (pb) pb->next = a; else a->mon->clients = a;
+		b->next = a->next;
+		a->next = b;
+	} else {
+		if (pa) pa->next = b; else a->mon->clients = b;
+		if (pb) pb->next = a; else a->mon->clients = a;
+		p = a->next;
+		a->next = b->next;
+		b->next = p;
+	}
 }
 
 void
@@ -1187,7 +1366,9 @@ resizemouse(const Arg *arg)
 	Client *c;
 	Monitor *m;
 	XEvent ev;
+#if LOCK_MOVE_RESIZE_REFRESH_RATE
 	Time lasttime = 0;
+#endif
 
 	if (!(c = selmon->sel))
 		return;
@@ -1209,9 +1390,11 @@ resizemouse(const Arg *arg)
 			handler[ev.type](&ev);
 			break;
 		case MotionNotify:
+#if LOCK_MOVE_RESIZE_REFRESH_RATE
 			if ((ev.xmotion.time - lasttime) <= (1000 / refreshrate))
 				continue;
 			lasttime = ev.xmotion.time;
+#endif
 
 			nw = MAX(ev.xmotion.x - ocx - 2 * c->bw + 1, 1);
 			nh = MAX(ev.xmotion.y - ocy - 2 * c->bw + 1, 1);
@@ -1235,6 +1418,13 @@ resizemouse(const Arg *arg)
 		selmon = m;
 		focus(NULL);
 	}
+#if ENHANCED_TOGGLE_FLOATING && RESTORE_SIZE_AND_POS_ETF
+	c->wasmanuallyedited = 1;
+	if (c->isfloating) {
+		c->sfx = c->x; c->sfy = c->y;
+		c->sfw = c->w; c->sfh = c->h;
+	}
+#endif
 }
 
 void
@@ -1258,6 +1448,12 @@ restack(Monitor *m)
 				wc.sibling = c->win;
 			}
 	}
+#if INFINITE_TAGS && PINNED_WINDOWS_ALWAYS_ON_TOP
+	/* pinned windows ride above the rest of the canvas */
+	for (c = m->stack; c; c = c->snext)
+		if (ISVISIBLE(c) && c->is_pinned)
+			XRaiseWindow(dpy, c->win);
+#endif
 	XSync(dpy, False);
 	while (XCheckMaskEvent(dpy, EnterWindowMask, &ev));
 }
@@ -1393,10 +1589,38 @@ setfullscreen(Client *c, int fullscreen)
 void
 setlayout(const Arg *arg)
 {
+#if INFINITE_TAGS
+	const Layout *temp_new_layout = (arg && arg->v) ? (Layout *)arg->v : selmon->lt[selmon->sellt ^ 1];
+	const Layout *old_layout;
+
+	if (temp_new_layout == selmon->lt[selmon->sellt])
+		return;
+	old_layout = selmon->lt[selmon->sellt];
+#endif
 	if (!arg || !arg->v || arg->v != selmon->lt[selmon->sellt])
 		selmon->sellt ^= 1;
 	if (arg && arg->v)
 		selmon->lt[selmon->sellt] = (Layout *)arg->v;
+#if INFINITE_TAGS
+	/* leaving the floating layout parks the viewport and saves the canvas;
+	 * entering it restores the exact positions saved last time */
+	if (old_layout->arrange == NULL && selmon->lt[selmon->sellt]->arrange != NULL) {
+		Client *c;
+
+		save_canvas_positions(selmon);
+		homecanvas(NULL);
+		for (c = selmon->clients; c; c = c->next)
+			if (!c->isfixed) c->isfloating = 0;
+	}
+
+	if (selmon->lt[selmon->sellt]->arrange == NULL) {
+		Client *c;
+
+		restore_canvas_positions(selmon);
+		for (c = selmon->clients; c; c = c->next)
+			c->isfloating = 1;
+	}
+#endif
 	strncpy(selmon->ltsymbol, selmon->lt[selmon->sellt]->symbol, sizeof selmon->ltsymbol);
 #if FLOATING_LAYOUT_FLOATS_WINDOWS
 	/* leaving the floating layout re-tiles windows that were floated by it */
@@ -1461,6 +1685,15 @@ setup(void)
 		die("no fonts could be loaded.");
 	lrpad = drw->fonts->h;
 	bh = drw->fonts->h + 2;
+#if BAR_HEIGHT
+	bh = user_bh ? user_bh : bh;
+#endif
+#if BAR_PADDING
+	lsp = left_sidepad;
+	rsp = right_sidepad;
+	tvp = top_vertpad;
+	bvp = -bottom_vertpad;
+#endif
 	updategeom();
 	/* init atoms */
 	utf8string = XInternAtom(dpy, "UTF8_STRING", False);
@@ -1485,6 +1718,16 @@ setup(void)
 	cursor[CurNormal] = drw_cur_create(drw, XC_left_ptr);
 	cursor[CurResize] = drw_cur_create(drw, XC_sizing);
 	cursor[CurMove] = drw_cur_create(drw, XC_fleur);
+#if BETTER_RESIZE && BR_CHANGE_CURSOR
+	cursor[CurNW] = drw_cur_create(drw, XC_top_left_corner);
+	cursor[CurNE] = drw_cur_create(drw, XC_top_right_corner);
+	cursor[CurSW] = drw_cur_create(drw, XC_bottom_left_corner);
+	cursor[CurSE] = drw_cur_create(drw, XC_bottom_right_corner);
+	cursor[CurN]  = drw_cur_create(drw, XC_top_side);
+	cursor[CurS]  = drw_cur_create(drw, XC_bottom_side);
+	cursor[CurE]  = drw_cur_create(drw, XC_right_side);
+	cursor[CurW]  = drw_cur_create(drw, XC_left_side);
+#endif
 	/* init appearance */
 	scheme = ecalloc(LENGTH(colors), sizeof(Clr *));
 	for (i = 0; i < LENGTH(colors); i++)
@@ -1586,7 +1829,28 @@ void
 tag(const Arg *arg)
 {
 	if (selmon->sel && arg->ui & TAGMASK) {
+#if INFINITE_TAGS
+		Client *c = selmon->sel;
+		unsigned int target_tag_mask = arg->ui & TAGMASK;
+		unsigned int i;
+
+		/* remember where the window sat on the canvas of its target tag so
+		 * it appears there when that tag is viewed in the floating layout */
+		for (i = 0; i < ntags; i++) {
+			if (target_tag_mask & (1 << i)) {
+				c->saved_cx = selmon->canvas[i].cx + (selmon->ww - WIDTH(c)) / 2;
+				c->saved_cy = selmon->canvas[i].cy + (selmon->wh - HEIGHT(c)) / 2;
+				c->saved_cw = c->w;
+				c->saved_ch = c->h;
+				c->was_on_canvas = 1;
+				break;
+			}
+		}
+#endif
 		selmon->sel->tags = arg->ui & TAGMASK;
+#if EWMH_TAGS
+		ewmh_setclientdesktop(selmon->sel);
+#endif
 		focus(NULL);
 		arrange(selmon);
 	}
@@ -1634,7 +1898,7 @@ togglebar(const Arg *arg)
 	(void)arg;
 	selmon->showbar = !selmon->showbar;
 	updatebarpos(selmon);
-	XMoveResizeWindow(dpy, selmon->barwin, selmon->wx, selmon->by, selmon->ww, bh);
+	positionbarwin(selmon);
 	arrange(selmon);
 }
 
@@ -1752,7 +2016,13 @@ updatebars(void)
 	for (m = mons; m; m = m->next) {
 		if (m->barwin)
 			continue;
-		m->barwin = XCreateWindow(dpy, root, m->wx, m->by, m->ww, bh, 0, DefaultDepth(dpy, screen),
+		m->barwin = XCreateWindow(dpy, root,
+#if BAR_PADDING
+			m->wx + lsp, m->by + (m->topbar ? tvp : bvp), m->ww - lsp - rsp, bh,
+#else
+			m->wx, m->by, m->ww, bh,
+#endif
+			0, DefaultDepth(dpy, screen),
 				CopyFromParent, DefaultVisual(dpy, screen),
 				CWOverrideRedirect|CWBackPixmap|CWEventMask, &wa);
 		XDefineCursor(dpy, m->barwin, cursor[CurNormal]->cursor);
@@ -1776,11 +2046,21 @@ updatebarpos(Monitor *m)
 	m->wh -= m->strut_top + m->strut_bottom;
 #endif
 	if (m->showbar) {
+#if BAR_PADDING
+		m->wh = m->wh - top_vertpad - bottom_vertpad - bh;
+		m->by = m->topbar ? m->wy : m->wy + m->wh + top_vertpad + bottom_vertpad;
+		m->wy = m->topbar ? m->wy + bh + tvp : m->wy;
+#else
 		m->wh -= bh;
 		m->by = m->topbar ? m->wy : m->wy + m->wh;
 		m->wy = m->topbar ? m->wy + bh : m->wy;
+#endif
 	} else
+#if BAR_PADDING
+		m->by = -bh - bvp;
+#else
 		m->by = -bh;
+#endif
 }
 
 void
@@ -1984,6 +2264,52 @@ updatewmhints(Client *c)
 	}
 }
 
+#if TAG_TO_TAG
+
+void
+view(const Arg *arg)
+{
+#if INFINITE_TAGS
+	Client *c;
+
+	if (selmon->lt[selmon->sellt]->arrange == NULL)
+		save_canvas_positions(selmon);
+#endif
+
+	/* pressing the tag you are already viewing flips to the previous tagset */
+	if ((arg->ui & TAGMASK) == selmon->tagset[selmon->seltags])
+		selmon->seltags ^= 1;
+	else {
+		selmon->seltags ^= 1; /* toggle sel tagset */
+		if (arg->ui & TAGMASK)
+			selmon->tagset[selmon->seltags] = arg->ui & TAGMASK;
+	}
+
+#if INFINITE_TAGS
+	{
+		int newtag = getcurrenttag(selmon);
+
+		if (selmon->lt[selmon->sellt]->arrange == NULL) {
+			restore_canvas_positions(selmon);
+			for (c = selmon->clients; c; c = c->next)
+				if (c->tags & (1 << newtag))
+					c->isfloating = 1;
+		} else {
+			selmon->canvas[newtag].cx = 0;
+			selmon->canvas[newtag].cy = 0;
+		}
+	}
+#endif
+
+	focus(NULL);
+	arrange(selmon);
+#if EWMH_TAGS
+	ewmh_setviewport();
+#endif
+}
+
+#else /* !TAG_TO_TAG */
+
 void
 view(const Arg *arg)
 {
@@ -1998,6 +2324,8 @@ view(const Arg *arg)
 	ewmh_setviewport();
 #endif
 }
+
+#endif /* TAG_TO_TAG */
 
 Client *
 wintoclient(Window w)
@@ -2087,8 +2415,16 @@ main(int argc, char *argv[])
 {
 	if (argc == 2 && !strcmp("-v", argv[1]))
 		die("vxwm-"VERSION);
+#if AUTOSTART
+	else if (argc == 2 && !strcmp("-ignoreautostart", argv[1]))
+		ignoreautostart = 1;
+#endif
 	else if (argc != 1)
-		die("usage: vxwm [-v]");
+		die("usage: vxwm [-v]"
+#if AUTOSTART
+			" [-ignoreautostart]"
+#endif
+		);
 	if (!setlocale(LC_CTYPE, "") || !XSupportsLocale())
 		fputs("warning: no locale support\n", stderr);
 	if (!(dpy = XOpenDisplay(NULL)))
@@ -2100,6 +2436,10 @@ main(int argc, char *argv[])
 		die("pledge");
 #endif /* __OpenBSD__ */
 	scan();
+#if AUTOSTART
+	if (!ignoreautostart)
+		runautostart();
+#endif
 	run();
 	cleanup();
 	XCloseDisplay(dpy);

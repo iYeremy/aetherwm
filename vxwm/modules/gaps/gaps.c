@@ -24,18 +24,22 @@ gaps_tile(Monitor *m)
 	if (n == 0)
 		return;
 
-	mw = m->ww - m->gappx;
+	if (n > (unsigned int)m->nmaster)
+		mw = m->nmaster ? m->ww * m->mfact : 0;
+	else
+		mw = m->ww;
+
 	for (i = 0, my = ty = m->gappx, c = nexttiled(m->clients); c;
 	     c = nexttiled(c->next), i++)
 		if (i < (unsigned int)m->nmaster) {
 			h = (m->wh - my) / (int)(MIN(n, (unsigned int)m->nmaster) - i) - m->gappx;
-			resize(c, m->wx + m->gappx, m->wy + my,
+			resize(c, m->wx + m->gappx + c->bw, m->wy + my,
 			    mw - 2 * c->bw - m->gappx, h - 2 * c->bw, 0);
 			if (my + HEIGHT(c) + m->gappx < m->wh)
 				my += HEIGHT(c) + m->gappx;
 		} else {
 			h = (m->wh - ty) / (int)(n - i) - m->gappx;
-			resize(c, m->wx + mw + m->gappx, m->wy + ty,
+			resize(c, m->wx + mw + m->gappx + c->bw, m->wy + ty,
 			    m->ww - mw - 2 * c->bw - 2 * m->gappx, h - 2 * c->bw, 0);
 			if (ty + HEIGHT(c) + m->gappx < m->wh)
 				ty += HEIGHT(c) + m->gappx;
