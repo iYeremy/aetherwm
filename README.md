@@ -25,7 +25,7 @@ movement, fullscreen, live `xrdb` reload and pywal colour theming.
   (`Super+Shift+arrows`), pin windows (`Super+Ctrl+z`), center the focused
   window (`Super+Shift+d`), return to the origin (`Super+r`).
 - **Gaps** — inner/outer gaps, adjustable at runtime (`Super+minus/equal`).
-- **Layouts** — floating, tiled (master + stack) and monocle.
+- **Layouts** — tiled (master + stack, **default**), floating and monocle.
 - **Enhanced toggle floating** — float a window or restore it to its saved tiled
   geometry (compiled but unbound by default; `Super+q` is reserved for closing
   windows).
@@ -90,8 +90,8 @@ exec /usr/local/bin/vxwm
 | `Super+t` / `Super+w` / `Super+e` | kitty / brave / thunar |
 | `Super+q` | close focused window |
 | `Super+Shift+q` | quit |
-| `Super+space` | cycle layout (floating → tiled → monocle) |
-| `Super+f` / `Super+m` | tiled / monocle |
+| `Super+space` | toggle between current and previous layout |
+| `Super+f` / `Super+Shift+t` / `Super+m` | tiled / floating / monocle |
 | `Super+Shift+f` | fullscreen |
 | `Super+Shift+space` | toggle floating on the focused window |
 | `Super+j` `Super+k` | focus next / previous |

@@ -90,12 +90,14 @@ const int refreshrate = 360;  /* move/resize refresh rate (exported for modules)
 
 static const Layout layouts[] = {
 	/* symbol     arrange function */
-	{ "><>",      NULL },    /* no layout function means floating behavior (default) */
+	/* tiled is the default (first entry). Floating has no arrange function and
+	 * is reached with Super+Shift+t; Super+space toggles current/previous. */
 #if GAPS
 	{ "[]=",      gaps_tile },
 #else
 	{ "[]=",      tile },
 #endif
+	{ "><>",      NULL },    /* no arrange function means floating behavior */
 	{ "[M]",      monocle },
 };
 
@@ -137,7 +139,8 @@ static const Key keys[] = {
 	{ MODKEY,                       XK_0,      view,           {0} },
 	{ MODKEY,                       XK_q,      killclient,     {0} }, /* close focused window */
 	{ MODKEY,                       XK_t,      spawn,          {.v = termcmd } }, /* terminal */
-	{ MODKEY,                       XK_f,      setlayout,      {.v = &layouts[1]} }, /* tiled */
+	{ MODKEY|ShiftMask,             XK_t,      setlayout,      {.v = &layouts[1]} }, /* floating */
+	{ MODKEY,                       XK_f,      setlayout,      {.v = &layouts[0]} }, /* tiled (default) */
 	{ MODKEY,                       XK_m,      setlayout,      {.v = &layouts[2]} }, /* monocle */
 	{ MODKEY,                       XK_space,  setlayout,      {0} },
 	{ MODKEY|ShiftMask,             XK_space,  togglefloating, {0} },
