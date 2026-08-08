@@ -1,6 +1,6 @@
 .TH VXWM 1 vxwm\-VERSION
 .SH NAME
-vxwm \- versatile X window manager (dwm fork)
+vxwm \- versatile X window manager (dwm fork with infinite tags and canvas)
 .SH SYNOPSIS
 .B vxwm
 .RB [ \-v ]
@@ -20,22 +20,21 @@ layout applied.
 Windows are grouped by tags. Each window can be tagged with one or multiple
 tags. Selecting certain tags displays all windows with these tags.
 .P
+Tags are backed by an infinite canvas: each tag is an unbounded plane on which
+windows can be placed anywhere. The canvas can be panned, windows can be pinned
+to the viewport, and the focused window can be centered or reset to the origin.
+.P
 Each screen contains a small status bar which displays all available tags, the
 layout, the title of the focused window, and the text read from the root window
 name property, if the screen is focused. A floating window is indicated with an
 empty square and a maximised floating window is indicated with a filled square
-before the windows title.  The selected tags are indicated with a different
+before the windows title. The selected tags are indicated with a different
 color. The tags of the focused window are indicated with a filled square in the
-top left corner.  The tags which are applied to one or more windows are
-indicated with an empty square in the top left corner.
+top left corner. The tags which are applied to one or more windows are indicated
+with an empty square in the top left corner.
 .P
-vxwm draws a small border around windows to indicate the focus state.
-.P
-Additional features are provided by optional modules that are compiled in
-individually and toggled through a central header; see the module contract in
-the
-.B modules
-directory of the source distribution.
+A colour scheme can be reloaded at runtime from the X resource database with the
+xrdb reload keybinding, allowing pywal-generated palettes to be applied live.
 .SH OPTIONS
 .TP
 .B \-v
@@ -61,100 +60,168 @@ click on a tag label applies that tag to the focused window.
 .B Mod1\-Button3
 click on a tag label adds/removes that tag to/from the focused window.
 .SS Keyboard commands
+The default modifier is
+.BR Mod4
+(Super). The tag keybindings use
+.BR Alt
+(Mod1). All keybindings below are the defaults compiled into vxwm and are
+customizable in
+.B config.h
+before compilation.
 .TP
-.B Mod1\-Shift\-Return
-Start the configured terminal.
+.B Super\-Shift\-Return
+Start the configured terminal (kitty).
 .TP
-.B Mod1\-p
-Spawn the configured launcher (e.g. dmenu) for launching other programs.
+.B Super\-p
+Spawn the configured launcher (dmenu) for launching other programs.
 .TP
-.B Mod1\-,
+.B Super\-e
+Spawn the configured file manager (thunar).
+.TP
+.B Super\-,
 Focus previous screen, if any.
 .TP
-.B Mod1\-.
+.B Super\-.
 Focus next screen, if any.
 .TP
-.B Mod1\-Shift\-,
+.B Super\-Shift\-,
 Send focused window to previous screen, if any.
 .TP
-.B Mod1\-Shift\-.
+.B Super\-Shift\-.
 Send focused window to next screen, if any.
 .TP
-.B Mod1\-b
+.B Super\-b
 Toggles bar on and off.
 .TP
-.B Mod1\-t
+.B Super\-t
+Start the configured terminal (kitty).
+.TP
+.B Super\-w
+Start the configured browser (brave).
+.TP
+.B Super\-f
 Sets tiled layout.
 .TP
-.B Mod1\-f
-Sets floating layout.
-.TP
-.B Mod1\-m
+.B Super\-m
 Sets monocle layout.
 .TP
-.B Mod1\-space
-Toggles between current and previous layout.
+.B Super\-space
+Toggles between current and previous layout (reaches the floating layout).
 .TP
-.B Mod1\-j
-Focus next window.
-.TP
-.B Mod1\-k
-Focus previous window.
-.TP
-.B Mod1\-i
-Increase number of windows in master area.
-.TP
-.B Mod1\-d
-Decrease number of windows in master area.
-.TP
-.B Mod1\-l
-Increase master area size.
-.TP
-.B Mod1\-h
-Decrease master area size.
-.TP
-.B Mod1\-Return
-Zooms/cycles focused window to/from master area (tiled layouts only).
-.TP
-.B Mod1\-Shift\-c
-Close focused window.
-.TP
-.B Mod1\-Shift\-space
+.B Super\-Shift\-space
 Toggle focused window between tiled and floating state.
 .TP
-.B Mod1\-Tab
+.B Super\-j
+Focus next window.
+.TP
+.B Super\-k
+Focus previous window.
+.TP
+.B Super\-i
+Increase number of windows in master area.
+.TP
+.B Super\-d
+Decrease number of windows in master area.
+.TP
+.B Super\-l
+Increase master area size.
+.TP
+.B Super\-h
+Decrease master area size.
+.TP
+.B Super\-Return
+Swap focused window with the master window.
+.TP
+.B Super\-q
+Close the focused window.
+.TP
+.B Super\-Shift\-f
+Toggle fullscreen on the focused window.
+.TP
+.B Super\-Tab
 Toggles to the previously selected tags.
 .TP
-.B Mod1\-Shift\-[1..n]
-Apply nth tag to focused window.
-.TP
-.B Mod1\-Shift\-0
-Apply all tags to focused window.
-.TP
-.B Mod1\-Control\-Shift\-[1..n]
-Add/remove nth tag to/from focused window.
-.TP
-.B Mod1\-[1..n]
+.B Super\-[1..9]
 View all windows with nth tag.
 .TP
-.B Mod1\-0
+.B Super\-0
 View all windows with any tag.
 .TP
-.B Mod1\-Control\-[1..n]
+.B Super\-Control\-[1..9]
 Add/remove all windows with nth tag to/from the view.
 .TP
-.B Mod1\-Shift\-q
+.B Alt\-[1..9]
+Apply nth tag to focused window.
+.TP
+.B Super\-Shift\-0
+Apply all tags to focused window.
+.TP
+.B Super\-Control\-Shift\-[1..9]
+Add/remove nth tag to/from focused window.
+.TP
+.B Super\-minus
+Decrease inner/outer gaps.
+.TP
+.B Super\-equal
+Increase inner/outer gaps.
+.TP
+.B Super\-Shift\-equal
+Reset gaps to the default.
+.TP
+.B Super\-Left / Right / Up / Down
+Move the focused floating window one step (default 50px).
+.TP
+.B Super\-Control\-Left / Right / Up / Down
+Resize the focused floating window one step.
+.TP
+.B Alt\-Left / Right / Up / Down
+Focus the nearest window in that direction.
+.TP
+.B Super\-r
+Return the canvas of the current tag to the origin (0,0).
+.TP
+.B Super\-Shift\-Left / Right / Up / Down
+Pan the canvas of the current tag.
+.TP
+.B Super\-Shift\-d
+Center the focused window on the canvas.
+.TP
+.B Super\-Control\-z
+Pin/unpin the focused window to the viewport.
+.TP
+.B Super\-F5
+Reload colours from the X resource database.
+.TP
+.B Super\-Shift\-w
+Spawn the wallpaper script (rofi picker + pywal).
+.TP
+.B Print
+Spawn the screenshot script (scrot selection).
+.TP
+.B XF86AudioRaiseVolume / LowerVolume / Mute
+Adjust audio via the volume script (wpctl).
+.TP
+.B XF86MonBrightnessUp / Down
+Adjust backlight via the brightness script (brightnessctl).
+.TP
+.B Super\-Shift\-q
 Quit vxwm.
 .SS Mouse commands
 .TP
-.B Mod1\-Button1
+.B Super\-Button1
 Move focused window while dragging. Tiled windows will be toggled to the floating state.
 .TP
-.B Mod1\-Button2
+.B Super\-Button2
 Toggles focused window between floating and tiled state.
 .TP
-.B Mod1\-Button3
+.B Super\-Button3
 Resize focused window while dragging. Tiled windows will be toggled to the floating state.
+.TP
+.B Super\-Shift\-Button1
+Pan the canvas of the current tag while dragging.
+.TP
+.B Button1 (on the root window)
+Pan the canvas of the current tag while dragging.
 .SS Restart
 .TP
 .B rvx
@@ -162,35 +229,20 @@ Restarts vxwm. Run
 .B rvx -d
 to restart it inside a fresh
 .BR dbus-run-session (1).
-The key bindings listed above are the defaults compiled into vxwm; they are
-customizable in
-.B config.h
-before compilation. The default modifier is
-.BR Mod1 (Alt);
-many users prefer
-.BR Mod4 (Super),
-which is set in config.h.
 .SH CUSTOMIZATION
 vxwm is customized by creating a custom config.h and (re)compiling the source
-code. Optional modules are enabled in the central module header. This keeps it
-fast, secure and simple.
+code. Optional modules are enabled in the central module header
+.RB ( modules/modules.h ).
+This keeps it fast, secure and simple.
 .SH SEE ALSO
 .BR xsetroot (1),
 .BR dmenu (1),
 .BR dbus-run-session (1)
 .SH ISSUES
 Java applications which use the XToolkit/XAWT backend may draw grey windows
-only. The XToolkit/XAWT backend breaks ICCCM-compliance in recent JDK 1.5 and early
-JDK 1.6 versions, because it assumes a reparenting window manager. Possible workarounds
-are using JDK 1.4 (which doesn't contain the XToolkit/XAWT backend) or setting the
-environment variable
-.BR AWT_TOOLKIT=MToolkit
-(to use the older Motif backend instead) or running
-.B xprop -root -f _NET_WM_NAME 32a -set _NET_WM_NAME LG3D
-or
-.B wmname LG3D
-(to pretend that a non-reparenting window manager is running that the
-XToolkit/XAWT backend can recognize) or when using OpenJDK setting the environment variable
-.BR _JAVA_AWT_WM_NONREPARENTING=1 .
+only. A workaround is to use another JDK, for instance OpenJDK 6.
 .SH BUGS
-Report bugs via the aetherwm repository.
+.t
+.P
+The status bar may display "broken" for the name of the focused window if the
+window title is not UTF-8 encoded.

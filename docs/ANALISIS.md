@@ -387,11 +387,11 @@ pero inconsistente y confuso.
 | **EWMH tags** | `EWMH_TAGS` | ewmh_tags/ | Publica `_NET_NUMBER_OF_DESKTOPS/CURRENT_DESKTOP/DESKTOP_NAMES/VIEWPORT/_NET_WM_DESKTOP` para bars externas | Atoms extra en `netatom[]`, `setup`, `manage`, `sendmon`, `tag/toggletag/toggleview/view` |
 | **Barras externas** | `EXTERNAL_BARS`, `EXTERNAL_BARS_ALWAYS_ON_TOP` | externalbars/ | Detecta barras con `_NET_WM_STRUT(_PARTIAL)`, reserva área en cada monitor | `maprequest`, `scan`, `propertynotify`, `destroynotify`, `unmapnotify`, `updatebarpos`, `restack`, `cleanup` |
 | **Warp to client** | `WARP_TO_CLIENT` + 6 `WARP_TO_*` | warptoclient/ | Mueve el cursor al centro de una ventana/contexto | `focusstack`, `incnmaster`, `manage`, `unmanage`, `swapmaster`, `enhancedtogglefloating`, `moveresize`, `focusdir` |
-| **Enhanced toggle floating** | `ENHANCED_TOGGLE_FLOATING`, `RESTORE_SIZE_AND_POS_ETF` | etf/ | Toggle flotante "inteligente": recuerda tamaño/pos; al desflotar vuelve a tiled | `Client.sfx/sfy/sfw/sfh`, `wasmanuallyedited`; keybind `Mod+q` |
+| **Enhanced toggle floating** | `ENHANCED_TOGGLE_FLOATING`, `RESTORE_SIZE_AND_POS_ETF` | etf/ | Toggle flotante "inteligente": recuerda tamaño/pos; al desflotar vuelve a tiled | `Client.sfx/sfy/sfw/sfh`, `wasmanuallyedited`; keybind `Mod+q` (estado actual: sin bind, `Super+q` cierra ventana) |
 | **Window map/unmap** | `WINDOWMAP` | windowmap/ | Mapear/desmapear ventanas en vez de moverlas fuera (arregla foco perdido y anima con picom) | `SHOWHIDEPROFILE`, `Client.ismapped`, `arrange` con grab |
 | **Foco direccional** | `DIRECTIONAL_FOCUS` | directionalfocus/ | Foco por dirección (Alt+flechas) con scoring geométrico | keybinds `focusdir` |
 | **Movimiento direccional** | `DIRECTIONAL_MOVE` | directionalmove/ | Mover cliente tiled en dirección (reordena lista `clients`) | `moveresize`, keybinds `movedir` |
-| **Autostart** | `AUTOSTART` | autostart/ | Ejecuta `autostart[]` de config.h al inicio (`-ignoreautostart` lo salta) | `main`, `config.h` |
+| **Autostart** | `AUTOSTART` | autostart/ | Ejecuta la lista `autostart[]` de `modules/autostart/autostart.c` al inicio (`-ignoreautostart` lo salta). Estado actual: lista vacía (las apps se lanzan por keybind) | `main`, `autostart.c` |
 | **Mover en tiled** | `MOVE_IN_TILED` | (núcleo) | Arrastrar con ratón reordena clientes tiled | `movemouse` |
 | **Tag-to-tag** | `TAG_TO_TAG` | (núcleo) | `view` vuelve a la tag anterior si se repite la misma | `view` |
 
@@ -459,7 +459,7 @@ a `movecanvasmouse`.
 
 | App | Archivo | Detalles |
 |---|---|---|
-| **kitty** | `kitty/kitty.conf` | Nerd Font JetBrains Mono, `font_size 10.5`, `background_opacity 0.65`, cursor trail, `include ~/.cache/wal/colors-kitty.conf` |
+| **kitty** | `kitty/kitty.conf` | Nerd Font JetBrains Mono, `font_size 12`, `initial_window_width/height` 1100x700 (ventana grande por defecto), `remember_window_size`, `background_opacity 0.65`, cursor trail, `include ~/.cache/wal/colors-kitty.conf` |
 | **picom** | `picom/picom.conf` + `animations/` | backend egl, vsync, shadow 30px desplazada, corner-radius 6, blur dual_kawase strength 5; activa *overshootless* para open/close/geometry y *slidefade overshoot* para tag change; reglas para menús/fullscreen/dock sin radios/sombras |
 | **rofi** | `config.rasi` (launcher drun limpio, importa `colors-rofi-dark.rasi`), `wall-changer.rasi` (grid 3×2 con previews), `wallpaper.rasi` (estilo alternativo hardcodeado, sin usar) | Temas centrados, radios, íconos Papirus |
 | **fish** | `config.fish`, `fish_variables` | Mínimo: saluda desactivado, alias `fck=sudo` |
@@ -577,10 +577,9 @@ Ordenados por severidad. Todos verificados leyendo el código.
     `scrot` de forma robusta (menor).
 
 12. **`config.h` guarda keybinds duplicados/en conflicto** — p. ej. `Mod+d` está
-    en `incnmaster` (vxwm.c:148) y `Mod+Shift+d` en `centerwindow`; `Mod+q` en
-    `quit` (vxwm.c:174) y `Mod+q` también en `enhancedtogglefloating`
-    (config.h:199). El primero gana (orden en `keys[]`), así que `ETF` solo se
-    puede usar con ratón/título. Es un conflicto silencioso.
+    en `incnmaster` (vxwm.c:148) y `Mod+Shift+d` en `centerwindow`. El conflicto
+    `Mod+q` quedó resuelto: `Super+q` ahora es `killclient` y el ETF quedó sin
+    bind.
 
 13. **`moveresize` con `INFINITE_TAGS`** — en la rama de canvas (vxwm.c:94-131)
     reimplementa a mano lo que `movecanvas` ya hace; frágil ante cambios.
