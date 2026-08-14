@@ -7,3 +7,6 @@ vxwm/vxwm-*.tar.gz
 # User data / caches
 config/wal/cache/
 wallpapers/generated/
+
+# Docs
+docs/ANALISIS.md

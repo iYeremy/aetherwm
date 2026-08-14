@@ -257,10 +257,17 @@ applysizehints(Client *c, int *x, int *y, int *w, int *h, int interact)
 void
 arrange(Monitor *m)
 {
+#if WINDOWMAP
+	XGrabServer(dpy);
+#endif
 	if (m)
 		showhide(m->stack);
 	else for (m = mons; m; m = m->next)
 		showhide(m->stack);
+#if WINDOWMAP
+	XUngrabServer(dpy);
+	XSync(dpy, False);
+#endif
 	if (m) {
 		arrangemon(m);
 		restack(m);
@@ -1785,18 +1792,20 @@ showhide(Client *c)
 	if (ISVISIBLE(c)) {
 		/* show clients top down */
 #if WINDOWMAP
-		window_map(c, 0);
+		if (!c->ismapped)
+			window_map(c, 1);
 #else
 		XMoveWindow(dpy, c->win, c->x, c->y);
-#endif
 		if ((!c->mon->lt[c->mon->sellt]->arrange || c->isfloating) && !c->isfullscreen)
 			resize(c, c->x, c->y, c->w, c->h, 0);
+#endif
 		showhide(c->snext);
 	} else {
 		/* hide clients bottom up */
 		showhide(c->snext);
 #if WINDOWMAP
-		window_unmap(c, 1);
+		if (c->ismapped)
+			window_unmap(c, 1);
 #else
 		XMoveWindow(dpy, c->win, WIDTH(c) * -2, c->y);
 #endif
