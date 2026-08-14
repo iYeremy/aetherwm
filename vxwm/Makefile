@@ -14,6 +14,7 @@ include config.mk
 SRC = drw.c vxwm.c util.c \
 	modules/autostart/autostart.c \
 	modules/betterresize/betterresize.c \
+	modules/bsp/bsp.c \
 	modules/directionalfocus/directionalfocus.c \
 	modules/directionalmove/directionalmove.c \
 	modules/etf/etf.c \

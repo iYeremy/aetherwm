@@ -63,6 +63,13 @@
 /* Move a tiled client in a direction by swapping it with the closest client
  * (used by the MOVE_RESIZE_WITH_KEYBOARD arrows and independently bindable). */
 
+#define BSP_LAYOUT 1
+/* Balanced binary-space-partition tiling: new windows split the leaf under
+ * the mouse pointer, so the layout never collapses on one side and four
+ * quadrants are reached naturally. Replaces the master+stack tile as the
+ * default tiled layout. Adds `bspnode` to Client and `bsproot` to Monitor;
+ * hooks core swaptile/setmfact/unmanage. */
+
 /* --- Interaction ------------------------------------------------------- */
 
 #define BETTER_RESIZE 1

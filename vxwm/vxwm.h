@@ -121,6 +121,9 @@ struct Client {
 	int wasmanuallyedited;  /* etf: user moved/resized since last toggle */
 #endif
 #endif
+#if BSP_LAYOUT
+	struct BspNode *bspnode; /* bsp: leaf node of this client in the split tree */
+#endif
 };
 
 typedef struct {
@@ -169,6 +172,9 @@ struct Monitor {
 #endif
 #if EXTERNAL_BARS
 	int strut_top, strut_bottom, strut_left, strut_right; /* externalbars */
+#endif
+#if BSP_LAYOUT
+	struct BspNode *bsproot; /* bsp: root of the binary split tree */
 #endif
 };
 

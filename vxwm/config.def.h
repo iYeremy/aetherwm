@@ -92,7 +92,11 @@ static const Layout layouts[] = {
 	/* symbol     arrange function */
 	/* tiled is the default (first entry). Floating has no arrange function and
 	 * is reached with Super+Shift+t; Super+space toggles current/previous. */
-#if GAPS
+#if BSP_LAYOUT
+	/* balanced binary-split tiling: new windows split the pane under the
+	 * mouse and four quadrants are reached naturally */
+	{ "[]=",      bsp_arrange },
+#elif GAPS
 	{ "[]=",      gaps_tile },
 #else
 	{ "[]=",      tile },

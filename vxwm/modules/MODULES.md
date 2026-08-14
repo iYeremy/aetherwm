@@ -68,6 +68,7 @@ modules/<nombre>/
 | `moveresizekbd` | `MOVE_RESIZE_WITH_KEYBOARD` | Mover y redimensionar ventanas flotantes por teclado |
 | `directionalfocus` | `DIRECTIONAL_FOCUS` | Enfoque direccional de ventanas con `focusdir` |
 | `directionalmove` | `DIRECTIONAL_MOVE` | Movimiento direccional de ventanas en tiled con `movedir` |
+| `bsp` | `BSP_LAYOUT` | Mosaico equilibrado por partición binaria del espacio: las ventanas nuevas dividen la ventana bajo el mouse y se alcanzan 4 cuadrantes |
 | `betterresize` | `BR_CHANGE_CURSOR` | Redimensionado de ventanas desde 8 bordes/esquinas con cambio de cursor |
 | `zoom` | `ZOOM` | Integración con vcompmgr para zoom |
 | `warptoclient` | `WARP_TO_CLIENT` | Warp del puntero al foco/evento de ventana |

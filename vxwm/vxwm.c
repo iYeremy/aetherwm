@@ -84,6 +84,9 @@
 #if DIRECTIONAL_MOVE
 #include "modules/directionalmove/directionalmove.h"
 #endif
+#if BSP_LAYOUT
+#include "modules/bsp/bsp.h"
+#endif
 #if BETTER_RESIZE
 #include "modules/betterresize/betterresize.h"
 #endif
@@ -1243,10 +1246,18 @@ pop(Client *c)
 }
 
 /* Swap two clients in their shared monitor's clients list. Used by the core
- * movemouse() (MOVE_IN_TILED) and by the directionalmove module (movedir). */
+ * movemouse() (MOVE_IN_TILED) and by the directionalmove module (movedir).
+ * With the bsp layout the swap happens on the split tree instead, so the
+ * tiling structure is preserved and the window never turns floating. */
 void
 swaptile(Client *a, Client *b)
 {
+#if BSP_LAYOUT
+	if (a->bspnode && b->bspnode) {
+		bsp_swap(a, b);
+		return;
+	}
+#endif
 	Client *pa = NULL, *pb = NULL, *p;
 
 	for (p = a->mon->clients; p; p = p->next) {
@@ -1656,6 +1667,14 @@ setmfact(const Arg *arg)
 {
 	float f;
 
+#if BSP_LAYOUT
+	/* in the bsp layout the master factor becomes the split ratio of the
+	 * focused window's container */
+	if (selmon->lt[selmon->sellt]->arrange == bsp_arrange) {
+		bsp_setmfact(arg);
+		return;
+	}
+#endif
 	if (!arg || !selmon->lt[selmon->sellt]->arrange)
 		return;
 	f = arg->f < 1.0 ? arg->f + selmon->mfact : arg->f - 1.0;
@@ -1992,6 +2011,9 @@ unmanage(Client *c, int destroyed)
 		XSetErrorHandler(xerror);
 		XUngrabServer(dpy);
 	}
+#if BSP_LAYOUT
+	bsp_unmanage(c); /* drop the client's leaf before the struct is freed */
+#endif
 	free(c);
 	focus(NULL);
 	updateclientlist();
