@@ -2273,8 +2273,6 @@ updatewmhints(Client *c)
 	}
 }
 
-#if TAG_TO_TAG
-
 void
 view(const Arg *arg)
 {
@@ -2285,14 +2283,14 @@ view(const Arg *arg)
 		save_canvas_positions(selmon);
 #endif
 
-	/* pressing the tag you are already viewing flips to the previous tagset */
+	/* pressing the workspace you are already viewing is a no-op: it must not
+	 * jump to a different workspace nor corrupt the current one */
 	if ((arg->ui & TAGMASK) == selmon->tagset[selmon->seltags])
-		selmon->seltags ^= 1;
-	else {
-		selmon->seltags ^= 1; /* toggle sel tagset */
-		if (arg->ui & TAGMASK)
-			selmon->tagset[selmon->seltags] = arg->ui & TAGMASK;
-	}
+		return;
+
+	selmon->seltags ^= 1; /* toggle sel tagset */
+	if (arg->ui & TAGMASK)
+		selmon->tagset[selmon->seltags] = arg->ui & TAGMASK;
 
 #if INFINITE_TAGS
 	{
@@ -2316,25 +2314,6 @@ view(const Arg *arg)
 	ewmh_setviewport();
 #endif
 }
-
-#else /* !TAG_TO_TAG */
-
-void
-view(const Arg *arg)
-{
-	if ((arg->ui & TAGMASK) == selmon->tagset[selmon->seltags])
-		return;
-	selmon->seltags ^= 1; /* toggle sel tagset */
-	if (arg->ui & TAGMASK)
-		selmon->tagset[selmon->seltags] = arg->ui & TAGMASK;
-	focus(NULL);
-	arrange(selmon);
-#if EWMH_TAGS
-	ewmh_setviewport();
-#endif
-}
-
-#endif /* TAG_TO_TAG */
 
 Client *
 wintoclient(Window w)

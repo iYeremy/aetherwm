@@ -51,8 +51,8 @@ static const int right_sidepad = 450;     /* right side padding ("centered" bar)
 #define PINNED_WINDOWS_ALWAYS_ON_TOP 1 /* pinned windows stay above others */
 #endif
 
-/* tagging */
-const char *tags[] = { "1", "2", "3", "4", "5", "6", "7", "8", "9" };
+/* tagging: vxwm is limited to 4 workspaces */
+const char *tags[] = { "1", "2", "3", "4" };
 
 #if INFINITE_TAGS
 #define MOVE_CANVAS_STEP 120 /* pixels per movecanvas() call */
@@ -76,7 +76,7 @@ static const Rule rules[] = {
 	 */
 	/* class      instance    title       tags mask     isfloating   monitor */
 	{ "Gimp",     NULL,       NULL,       0,            1,           -1 },
-	{ "Firefox",  NULL,       NULL,       1 << 8,       0,           -1 },
+	{ "Firefox",  NULL,       NULL,       1 << 3,       0,           -1 },
 };
 
 /* layout(s) */
@@ -154,11 +154,6 @@ static const Key keys[] = {
 	TAGKEYS(                        XK_2,                      1)
 	TAGKEYS(                        XK_3,                      2)
 	TAGKEYS(                        XK_4,                      3)
-	TAGKEYS(                        XK_5,                      4)
-	TAGKEYS(                        XK_6,                      5)
-	TAGKEYS(                        XK_7,                      6)
-	TAGKEYS(                        XK_8,                      7)
-	TAGKEYS(                        XK_9,                      8)
 	{ MODKEY|ShiftMask,             XK_q,      quit,           {0} },
 	{ MODKEY,                       XK_e,      spawn, SHCMD("thunar") },
 

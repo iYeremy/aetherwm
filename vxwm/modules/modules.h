@@ -38,9 +38,10 @@
  * COORDINATES_STYLE / COORDINATES_DIVISOR are configured in the
  * infinitetags module header. */
 
-#define TAG_TO_TAG 1
+#define TAG_TO_TAG 0
 /* Pressing the tag you are already viewing switches to the previously viewed
- * tag instead of doing nothing (the vanilla `view` behaviour). */
+ * tag instead of doing nothing (the vanilla `view` behaviour). Off: pressing
+ * the current workspace tag is a no-op (avoids accidental workspace jumps). */
 
 #define MOVE_IN_TILED 1
 /* Dragging a tiled window with the mouse reorders it among the tiled clients
