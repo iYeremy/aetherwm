@@ -820,12 +820,12 @@ Atom
 getatomprop(Client *c, Atom prop)
 {
 	int di;
-	unsigned long dl;
+	unsigned long dl, dleft;
 	unsigned char *p = NULL;
 	Atom da, atom = None;
 
 	if (XGetWindowProperty(dpy, c->win, prop, 0L, sizeof atom, False, XA_ATOM,
-		&da, &di, &dl, &dl, &p) == Success && p) {
+		&da, &di, &dl, &dleft, &p) == Success && p) {
 		if (dl > 0)
 			atom = *(Atom *)p;
 		XFree(p);
