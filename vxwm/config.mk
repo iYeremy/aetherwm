@@ -1,6 +1,6 @@
 # vxwm version
 # Keep the version in sync with vxwm.1 and the LICENSE header.
-VERSION = 3.0
+VERSION = 1.0.0
 
 # Customize below to fit your system
 

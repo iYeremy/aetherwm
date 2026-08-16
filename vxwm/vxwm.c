@@ -2296,7 +2296,7 @@ void
 updatestatus(void)
 {
 	if (!gettextprop(root, XA_WM_NAME, stext, sizeof(stext)))
-		strcpy(stext, "vxwm-"VERSION);
+		strcpy(stext, "aetherwm-"VERSION);
 	drawbar(selmon);
 }
 
@@ -2469,7 +2469,7 @@ int
 main(int argc, char *argv[])
 {
 	if (argc == 2 && !strcmp("-v", argv[1]))
-		die("vxwm-"VERSION);
+		die("aetherwm-"VERSION);
 #if AUTOSTART
 	else if (argc == 2 && !strcmp("-ignoreautostart", argv[1]))
 		ignoreautostart = 1;
