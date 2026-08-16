@@ -30,6 +30,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -86,6 +87,9 @@
 #endif
 #if BSP_LAYOUT
 #include "modules/bsp/bsp.h"
+#endif
+#if SMOOTH_RESIZE
+#include "modules/anim/anim.h"
 #endif
 #if BETTER_RESIZE
 #include "modules/betterresize/betterresize.h"
@@ -1364,16 +1368,27 @@ resize(Client *c, int x, int y, int w, int h, int interact)
 void
 resizeclient(Client *c, int x, int y, int w, int h)
 {
-	XWindowChanges wc;
+	c->oldx = c->x; c->x = x;
+	c->oldy = c->y; c->y = y;
+	c->oldw = c->w; c->w = w;
+	c->oldh = c->h; c->h = h;
+#if SMOOTH_RESIZE
+	/* animate size changes; pure moves are applied instantly by the module */
+	anim_resizeclient(c, x, y, w, h);
+#else
+	{
+		XWindowChanges wc;
 
-	c->oldx = c->x; c->x = wc.x = x;
-	c->oldy = c->y; c->y = wc.y = y;
-	c->oldw = c->w; c->w = wc.width = w;
-	c->oldh = c->h; c->h = wc.height = h;
-	wc.border_width = c->bw;
-	XConfigureWindow(dpy, c->win, CWX|CWY|CWWidth|CWHeight|CWBorderWidth, &wc);
-	configure(c);
-	XSync(dpy, False);
+		wc.x = x;
+		wc.y = y;
+		wc.width = w;
+		wc.height = h;
+		wc.border_width = c->bw;
+		XConfigureWindow(dpy, c->win, CWX|CWY|CWWidth|CWHeight|CWBorderWidth, &wc);
+		configure(c);
+		XSync(dpy, False);
+	}
+#endif
 }
 
 void
@@ -1480,11 +1495,28 @@ void
 run(void)
 {
 	XEvent ev;
+#if SMOOTH_RESIZE
+	struct timespec ts; /* animation frame interval */
+#endif
 	/* main event loop */
 	XSync(dpy, False);
+#if SMOOTH_RESIZE
+	/* Poll with a short sleep so anim_tick() advances window animations
+	 * while the WM is idle (see modules/anim/anim.h). */
+	ts.tv_sec = 0;
+	ts.tv_nsec = (long)ANIM_TICK_MS * 1000000L;
+	while (running) {
+		while (XPending(dpy) && !XNextEvent(dpy, &ev))
+			if (handler[ev.type])
+				handler[ev.type](&ev); /* call handler */
+		anim_tick();
+		nanosleep(&ts, NULL);
+	}
+#else
 	while (running && !XNextEvent(dpy, &ev))
 		if (handler[ev.type])
 			handler[ev.type](&ev); /* call handler */
+#endif
 }
 
 void
@@ -2013,6 +2045,9 @@ unmanage(Client *c, int destroyed)
 	}
 #if BSP_LAYOUT
 	bsp_unmanage(c); /* drop the client's leaf before the struct is freed */
+#endif
+#if SMOOTH_RESIZE
+	anim_cancel(c); /* stop any running animation before the struct is freed */
 #endif
 	free(c);
 	focus(NULL);

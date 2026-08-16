@@ -91,6 +91,7 @@ typedef struct {
 
 typedef struct Monitor Monitor;
 typedef struct Client Client;
+struct Anim; /* anim: forward decl, defined in modules/anim/anim.c */
 struct Client {
 	char name[256];
 	float mina, maxa;
@@ -123,6 +124,9 @@ struct Client {
 #endif
 #if BSP_LAYOUT
 	struct BspNode *bspnode; /* bsp: leaf node of this client in the split tree */
+#endif
+#if SMOOTH_RESIZE
+	struct Anim *anim; /* anim: running resize animation, if any */
 #endif
 };
 

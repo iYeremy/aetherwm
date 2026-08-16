@@ -12,6 +12,7 @@
 include config.mk
 
 SRC = drw.c vxwm.c util.c \
+	modules/anim/anim.c \
 	modules/autostart/autostart.c \
 	modules/betterresize/betterresize.c \
 	modules/bsp/bsp.c \

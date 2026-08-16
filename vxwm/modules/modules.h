@@ -127,6 +127,12 @@
  * `gaps_tile()` (bind it in config.h `layouts[]` instead of `tile`) plus the
  * `setgaps` keybind. */
 
+#define SMOOTH_RESIZE 1
+/* Animate window geometry changes (resize/re-arrange) with an ease-out tween
+ * instead of jumping in one step, so compositor-heavy sessions look smooth.
+ * Position-only moves (floating window drags) stay instant. Adds `anim` to
+ * Client; hooks resizeclient(), run() and unmanage(). */
+
 #define XRDB 1
 /* Load colors from the X resource database (`dwm.color0/6`) at startup and
  * reload them on demand (keybind `xrdb`). Switches config.h color arrays to
