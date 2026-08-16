@@ -111,6 +111,9 @@ static const Layout layouts[] = {
 
 #define SCROLL_UP Button4
 #define SCROLL_DOWN Button5
+/* horizontal scroll (buttons 6/7) are not in the X11 headers, hence numeric */
+#define SCROLL_LEFT 6
+#define SCROLL_RIGHT 7
 
 #define TAGKEYS(KEY,TAG) \
 	{ MODKEY,                       KEY,      view,           {.ui = 1 << TAG} }, \
@@ -231,6 +234,13 @@ static const Button buttons[] = {
 	{ ClkRootWin,           0,                Button1,        movecanvasmouse, {.f = 1.5 } },
 	/* .f = drag multiplier (0.5 = half speed, 2 = double speed); negative
 	 * inverts the canvas direction */
+	/* Two-finger touchpad swipe (or mouse wheel) over the background pans the
+	 * infinite canvas like dragging it; scrolling over a window still scrolls
+	 * the app itself. */
+	{ ClkRootWin,           0,                SCROLL_UP,      movecanvasscroll, {.i = 2 } },
+	{ ClkRootWin,           0,                SCROLL_DOWN,    movecanvasscroll, {.i = 3 } },
+	{ ClkRootWin,           0,                SCROLL_LEFT,    movecanvasscroll, {.i = 0 } },
+	{ ClkRootWin,           0,                SCROLL_RIGHT,   movecanvasscroll, {.i = 1 } },
 #endif
 	{ ClkLtSymbol,          0,              Button1,        setlayout,      {0} },
 	{ ClkLtSymbol,          0,              Button3,        setlayout,      {.v = &layouts[2]} },

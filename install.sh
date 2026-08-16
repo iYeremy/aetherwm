@@ -95,7 +95,7 @@ done
 # --- uninstall ---------------------------------------------------------------
 if [ "$UNINSTALL" = "1" ]; then
     info "Removing deployed aetherwm files..."
-    for f in screenshot.sh wallpaper.sh volume.sh brightness.sh wal-dunst.sh; do
+    for f in screenshot.sh wallpaper.sh volume.sh brightness.sh wal-dunst.sh touchpad.sh; do
         [ "$DRY_RUN" = "1" ] && { info "would remove ~/$f"; continue; }
         rm -f "$HOME/$f" && ok "removed ~/$f"
     done
@@ -175,7 +175,7 @@ install_configs() {
              "$HOME/Pictures/Wallpaper" "$HOME/.config/dunst"
 
     # scripts -> $HOME (keybinds in vxwm/config.def.h reference these paths)
-    for script in screenshot.sh wallpaper.sh volume.sh brightness.sh wal-dunst.sh; do
+    for script in screenshot.sh wallpaper.sh volume.sh brightness.sh wal-dunst.sh touchpad.sh; do
         copy_file "$REPO_DIR/scripts/$script" "$HOME/$script" 755
     done
 
@@ -189,6 +189,12 @@ install_configs() {
     # dunst bootstrap config (wal-dunst.sh regenerates it from the pywal template)
     copy_file "$REPO_DIR/config/dunst/dunstrc" "$HOME/.config/dunst/dunstrc"
 
+    # If pywal has already run, derive the themed dunstrc from the template.
+    if [ -f "$HOME/.cache/wal/dunst" ] && [ "$DRY_RUN" = "0" ]; then
+        cp "$HOME/.cache/wal/dunst" "$HOME/.config/dunst/dunstrc"
+        ok "dunstrc regenerated from pywal template"
+    fi
+
     # wallpapers
     info "Copying wallpapers to ~/Pictures/Wallpaper ..."
     if [ "$DRY_RUN" = "1" ]; then
@@ -201,10 +207,12 @@ install_configs() {
     # xinitrc
     copy_file "$REPO_DIR/.xinitrc" "$HOME/.xinitrc" 755
 
-    # If pywal has already run, derive the themed dunstrc from the template.
-    if [ -f "$HOME/.cache/wal/dunst" ] && [ "$DRY_RUN" = "0" ]; then
-        cp "$HOME/.cache/wal/dunst" "$HOME/.config/dunst/dunstrc"
-        ok "dunstrc regenerated from pywal template"
+    # touchpad libinput config (tap-to-click, natural scrolling) - system-wide
+    if [ "$DRY_RUN" = "1" ]; then
+        info "(dry-run) would install $REPO_DIR/config/xorg/30-touchpad.conf -> /etc/X11/xorg.conf.d/30-touchpad.conf"
+    else
+        sudo install -D -m 644 "$REPO_DIR/config/xorg/30-touchpad.conf" /etc/X11/xorg.conf.d/30-touchpad.conf
+        ok "installed /etc/X11/xorg.conf.d/30-touchpad.conf"
     fi
 }
 

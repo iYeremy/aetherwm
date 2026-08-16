@@ -73,6 +73,45 @@ movecanvas(const Arg *arg)
 }
 
 void
+movecanvasscroll(const Arg *arg)
+{
+	Client *c;
+	int tagidx, dx = 0, dy = 0;
+
+	if (selmon->lt[selmon->sellt]->arrange != NULL)
+		return;
+	if (selmon->sel && selmon->sel->isfullscreen)
+		return;
+
+	tagidx = getcurrenttag(selmon);
+
+	/* Scroll events (mouse wheel / two-finger touchpad swipe) panned over the
+	 * background navigate the infinite canvas in the floating layout, so the
+	 * touchpad gesture mirrors dragging the background. The direction matches
+	 * the movecanvas keybinds: Button4=up, Button5=down, Button6=left,
+	 * Button7=right. */
+	switch (arg->i) {
+	case 0: dx = -MOVE_CANVAS_SCROLL_STEP; break; /* scroll left  */
+	case 1: dx =  MOVE_CANVAS_SCROLL_STEP; break; /* scroll right */
+	case 2: dy = -MOVE_CANVAS_SCROLL_STEP; break; /* scroll up    */
+	case 3: dy =  MOVE_CANVAS_SCROLL_STEP; break; /* scroll down  */
+	}
+
+	selmon->canvas[tagidx].cx -= dx;
+	selmon->canvas[tagidx].cy -= dy;
+
+	for (c = selmon->clients; c; c = c->next) {
+		if ((c->tags & (1 << tagidx)) && !c->is_pinned) {
+			c->x -= dx;
+			c->y -= dy;
+			XMoveWindow(dpy, c->win, c->x, c->y);
+		}
+	}
+
+	drawbar(selmon);
+}
+
+void
 movecanvasmouse(const Arg *arg)
 {
 	int start_x, start_y, tagidx, dx, dy;

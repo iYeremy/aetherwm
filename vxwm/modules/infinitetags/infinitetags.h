@@ -24,6 +24,9 @@
  * (drawbar, restack) can use them too; they compile out when the module is
  * off. */
 #define MOVE_CANVAS_STEP 120          /* pixels per canvas key step */
+#define MOVE_CANVAS_SCROLL_STEP 15    /* pixels per scroll event (libinput
+                                       * emits one event per 15 px of finger
+                                       * travel, so this pans 1:1) */
 #define COORDINATES_DIVISOR 10        /* drawbar coordinates are scaled by this */
 #define COORDINATES_STYLE "[x%d y%d]" /* drawbar coordinate format string */
 #define PINNED_WINDOWS_ALWAYS_ON_TOP 1 /* pinned windows stay above others */
@@ -38,6 +41,7 @@ int getcurrenttag(Monitor *m);
 void homecanvas(const Arg *arg);
 void movecanvas(const Arg *arg);
 void movecanvasmouse(const Arg *arg);
+void movecanvasscroll(const Arg *arg);
 void save_canvas_positions(Monitor *m);
 void restore_canvas_positions(Monitor *m);
 void centerwindow(const Arg *arg);

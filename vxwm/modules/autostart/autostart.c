@@ -10,10 +10,10 @@
 /* Shell commands run at startup, in order. Each entry is executed with
  * `sh -c <cmd>`. Skip this entirely with `vxwm -ignoreautostart`.
  *
- * Empty by default: apps are spawned on demand with keybindings (Super+t
- * opens the terminal, Super+w opens the browser). Add entries here to launch
- * daemons/tray apps at startup, e.g. "nm-applet" or "picom". */
+ * Add entries here to launch daemons/tray apps at startup, e.g. "nm-applet"
+ * or "picom". */
 static const char *const autostart[] = {
+	"$HOME/touchpad.sh", /* tap-to-click + natural scrolling (see scripts/) */
 	NULL,
 };
 
