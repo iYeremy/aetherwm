@@ -31,6 +31,10 @@ static MAYBE_CONST char *colors[][3] = {
  * place them under the pointer. */
 #define CENTER_NEW_FLOATING_WINDOWS 1
 #define NEW_FLOATING_WINDOWS_APPEAR_UNDER_CURSOR 0
+/* new windows opened while in the floating/canvas layout (Super+Shift+t) are
+ * sized to this percentage of the monitor and centered, so e.g. a terminal
+ * starts at a usable size on the infinite canvas. 0 disables the resize. */
+#define FLOATING_LAYOUT_NEW_WINDOW_SCALE 55
 
 /* bar appearance */
 #if BAR_HEIGHT

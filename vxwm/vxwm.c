@@ -1049,6 +1049,16 @@ manage(Window w, XWindowAttributes *wa)
 	if (!c->isfloating && !c->mon->lt[c->mon->sellt]->arrange)
 		c->isfloating = 1; /* floating layout floats every new window */
 #endif
+#if FLOATING_LAYOUT_NEW_WINDOW_SCALE > 0
+	/* in the floating/canvas layout, non-dialog windows open sized to a
+	 * fraction of the monitor and centered (terminals especially). */
+	if (trans == None && c->isfloating && !c->mon->lt[c->mon->sellt]->arrange) {
+		c->w = c->mon->ww * FLOATING_LAYOUT_NEW_WINDOW_SCALE / 100;
+		c->h = c->mon->wh * FLOATING_LAYOUT_NEW_WINDOW_SCALE / 100;
+		c->x = c->mon->wx + (c->mon->ww - c->w) / 2;
+		c->y = c->mon->wy + (c->mon->wh - c->h) / 2;
+	}
+#endif
 #if ENHANCED_TOGGLE_FLOATING
 	c->wasfloating = c->isfloating;
 	c->nfixed = c->isfixed;
