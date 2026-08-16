@@ -32,4 +32,6 @@ typedef struct BspNode BspNode;
 void bsp_arrange(Monitor *m);
 void bsp_swap(Client *a, Client *b);
 void bsp_setmfact(const Arg *arg);
+void bsp_resizemouse(Client *c, int dx, int dy,
+	int left, int right, int top, int bottom);
 void bsp_unmanage(Client *c);

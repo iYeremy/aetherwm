@@ -338,6 +338,67 @@ bsp_unmanage(Client *c)
 	bsp_remove_leaf(c->mon, c->bspnode);
 }
 
+/* Resize a tiled window with the mouse by adjusting the split ratio of the
+ * container whose divider is being dragged, instead of turning the window
+ * floating. `dx`/`dy` are the pointer deltas since the last motion event and
+ * `left`/`right`/`top`/`bottom` tell which edge of the client is grabbed.
+ * Walking up the tree finds the nearest ancestor split whose line coincides
+ * with the grabbed edge; its ratio follows the pointer, so the window grows
+ * and shrinks but keeps its place in the tiling (works with nested trees,
+ * e.g. the four-quadrant layout, and with corner drags resizing both axes at
+ * once by walking up once per axis to the nearest matching divider). */
+void
+bsp_resizemouse(Client *c, int dx, int dy, int left, int right, int top, int bottom)
+{
+	BspNode *child, *n;
+	int changed = 0;
+	float f;
+
+	if (!c || !c->bspnode)
+		return;
+
+	if (left || right) {
+		/* the vertical divider is the right edge of the left subtree or the
+		 * left edge of the right subtree; walk up to the nearest match */
+		child = c->bspnode;
+		for (n = child->parent; n; child = n, n = n->parent) {
+			if (n->dir != BSP_SPLIT_V)
+				continue;
+			if (!((right && child == n->left) || (left && child == n->right)))
+				continue;
+			f = n->ratio + (float)dx / MAX(1, n->w);
+			if (f < 0.2f) f = 0.2f;
+			if (f > 0.8f) f = 0.8f;
+			if (f != n->ratio) {
+				n->ratio = f;
+				changed = 1;
+			}
+			break;
+		}
+	}
+	if (top || bottom) {
+		/* the horizontal divider is the bottom edge of the top subtree or
+		 * the top edge of the bottom subtree; walk up to the nearest match */
+		child = c->bspnode;
+		for (n = child->parent; n; child = n, n = n->parent) {
+			if (n->dir != BSP_SPLIT_H)
+				continue;
+			if (!((bottom && child == n->left) || (top && child == n->right)))
+				continue;
+			f = n->ratio + (float)dy / MAX(1, n->h);
+			if (f < 0.2f) f = 0.2f;
+			if (f > 0.8f) f = 0.8f;
+			if (f != n->ratio) {
+				n->ratio = f;
+				changed = 1;
+			}
+			break;
+		}
+	}
+	if (changed)
+		arrange(c->mon);
+}
+
 #endif /* BSP_LAYOUT */
 
 /* Keep this translation unit non-empty when the module is disabled

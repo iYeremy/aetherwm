@@ -2,6 +2,9 @@
 
 #include "vxwm.h"
 #include "modules/betterresize/betterresize.h"
+#if BSP_LAYOUT
+#include "modules/bsp/bsp.h"
+#endif
 
 #if BETTER_RESIZE
 
@@ -17,6 +20,7 @@ betterresize_resizemouse(const Arg *arg)
 	int junk_signed;
 	unsigned int junk;
 	int left, right, top, bottom;
+	int lastdx = 0, lastdy = 0;
 #if BR_CHANGE_CURSOR
 	Cursor cur;
 #endif
@@ -68,6 +72,15 @@ betterresize_resizemouse(const Arg *arg)
 #endif
 			dx = ev.xmotion.x_root - (orig_x + rx);
 			dy = ev.xmotion.y_root - (orig_y + ry);
+
+#if BSP_LAYOUT
+			if (!c->isfloating && selmon->lt[selmon->sellt]->arrange == bsp_arrange) {
+				bsp_resizemouse(c, dx - lastdx, dy - lastdy, left, right, top, bottom);
+				lastdx = dx;
+				lastdy = dy;
+				continue;
+			}
+#endif
 
 			nx = orig_x;
 			ny = orig_y;
